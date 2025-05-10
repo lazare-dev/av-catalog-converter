@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+.github
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environment
+venv/
+.env
+.venv
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+logs/
+data/
+*.csv
+*.xlsx
+*.pdf
+*.json
+*.xml
+!requirements.txt
+!tests/fixtures/*.csv
+!tests/fixtures/*.xlsx
+!tests/fixtures/*.pdf
+!tests/fixtures/*.json
+!tests/fixtures/*.xml

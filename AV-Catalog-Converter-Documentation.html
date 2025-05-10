@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Catalog Converter Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            margin-top: 25px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow: auto;
+            position: relative;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background-color: #2980b9;
+        }
+        .command-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        .endpoint {
+            background-color: #f0f7fb;
+            border-left: 5px solid #3498db;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .project-structure {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            line-height: 1.3;
+        }
+        .component {
+            background-color: #f9f9f9;
+            border-left: 3px solid #2ecc71;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AV Catalog Converter Documentation</h1>
+
+    <h2>Codebase Overview</h2>
+    <p>The AV (Audio-Visual) Catalog Converter is a comprehensive tool designed to standardize and convert various catalog formats. This document provides a complete guide to understanding and running all components of the system.</p>
+
+    <h3>Core Structure</h3>
+    <ol>
+        <li>
+            <strong>File Parsers</strong>
+            <ul>
+                <li>Support for CSV, Excel, JSON, PDF, and XML files</li>
+                <li>Automatic format detection and appropriate parser selection</li>
+                <li>Extensible architecture for adding new parsers</li>
+            </ul>
+        </li>
+        <li>
+            <strong>Structure Analysis</strong>
+            <ul>
+                <li>Data boundary detection</li>
+                <li>Header detection and analysis</li>
+                <li>Structure pattern recognition</li>
+            </ul>
+        </li>
+        <li>
+            <strong>Field Mapping</strong>
+            <ul>
+                <li>Direct mapping based on field names</li>
+                <li>Pattern-based mapping for common formats</li>
+                <li>Semantic mapping using machine learning</li>
+                <li>Field definition management</li>
+            </ul>
+        </li>
+        <li>
+            <strong>Category Extraction</strong>
+            <ul>
+                <li>Hierarchical category analysis</li>
+                <li>Taxonomy mapping to standard categories</li>
+                <li>Category normalization</li>
+            </ul>
+        </li>
+        <li>
+            <strong>Value Normalization</strong>
+            <ul>
+                <li>Price normalization (currency, format)</li>
+                <li>ID normalization</li>
+                <li>Text normalization</li>
+                <li>Unit conversion</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Architecture</h3>
+    <ol>
+        <li>
+            <strong>Web API</strong>
+            <ul>
+                <li>RESTful API built with Flask</li>
+                <li>Swagger documentation</li>
+                <li>File upload and processing endpoints</li>
+                <li>Analysis and mapping endpoints</li>
+            </ul>
+        </li>
+        <li>
+            <strong>CLI Interface</strong>
+            <ul>
+                <li>Command-line interface for batch processing</li>
+                <li>Support for various input and output formats</li>
+                <li>Verbose logging options</li>
+            </ul>
+        </li>
+        <li>
+            <strong>Modular Design</strong>
+            <ul>
+                <li>Separate modules for parsing, analysis, mapping, etc.</li>
+                <li>Factory patterns for component creation</li>
+                <li>Dependency injection for flexibility</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Technologies</h3>
+    <ul>
+        <li><strong>Python 3.8+</strong>: Core programming language</li>
+        <li><strong>Pandas/NumPy</strong>: Data processing and manipulation</li>
+        <li><strong>Flask</strong>: Web API framework</li>
+        <li><strong>Machine Learning</strong>: Uses transformers and PyTorch for intelligent mapping</li>
+        <li><strong>Docker</strong>: Containerization support</li>
+        <li><strong>Tesseract OCR</strong>: For extracting text from PDFs</li>
+    </ul>
+
+    <h2>How to Run Everything</h2>
+
+    <h3>1. Installation</h3>
+
+    <h4>Option A: Direct Installation</h4>
+    <div class="command-container">
+        <pre><code>python install.py</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h4>Option B: Manual Installation</h4>
+    <div class="command-container">
+        <pre><code>pip install -r requirements.txt</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>pip install -e .</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h4>Option C: Docker Installation</h4>
+    <div class="command-container">
+        <pre><code>docker compose up --build</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h3>2. Running the Application</h3>
+
+    <h4>As a Web API Server</h4>
+    <div class="command-container">
+        <pre><code>av-catalog-converter --api --port 8080</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>python app.py --api --port 8080</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>docker compose up</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>The API will be available at <a href="http://localhost:8080">http://localhost:8080</a> with Swagger documentation at <a href="http://localhost:8080/api/docs/">http://localhost:8080/api/docs/</a></p>
+
+    <h4>As a Command-Line Tool</h4>
+    <div class="command-container">
+        <pre><code>av-catalog-converter --input path/to/input.csv --output path/to/output.csv --format csv</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>python app.py --input path/to/input.csv --output path/to/output.csv --format csv</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h3>3. Running Tests</h3>
+    <div class="command-container">
+        <pre><code>python run_tests.py --all</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>python run_tests.py --unit</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>python run_tests.py --integration</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>python run_tests.py --all --coverage</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h4>Troubleshooting Test Issues</h4>
+    <p>If you encounter an import file mismatch error with <code>test_json_parser.py</code>, follow these steps:</p>
+
+    <div class="command-container">
+        <pre><code># 1. Rename the conflicting test file
+ren tests\unit\utils\parsers\test_json_parser.py test_json_utility_parser.py
+
+# 2. Clean up __pycache__ directories
+for /d /r . %d in (__pycache__) do @if exist "%d" rd /s /q "%d"
+
+# 3. Run tests again
+python run_tests.py --all</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <p>For PowerShell:</p>
+    <div class="command-container">
+        <pre><code># 1. Rename the conflicting test file
+Rename-Item -Path "tests\unit\utils\parsers\test_json_parser.py" -NewName "test_json_utility_parser.py"
+
+# 2. Clean up __pycache__ directories
+Get-ChildItem -Path . -Filter "__pycache__" -Recurse -Directory | Remove-Item -Recurse -Force
+
+# 3. Run tests again
+python run_tests.py --all</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h3>4. Profiling Performance</h3>
+    <div class="command-container">
+        <pre><code>python profile_app.py</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>python analyze_profile.py</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h3>5. Docker Operations</h3>
+    <div class="command-container">
+        <pre><code>docker build -t av-catalog-converter .</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>docker run -p 8080:8080 av-catalog-converter</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <div class="command-container">
+        <pre><code>docker run -p 8080:8080 ^
+  -v %cd%/data/input:/app/data/input ^
+  -v %cd%/data/output:/app/data/output ^
+  -v %cd%/logs:/app/logs ^
+  av-catalog-converter</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p><em>Note: For PowerShell, use this command instead:</em></p>
+    <div class="command-container">
+        <pre><code>docker run -p 8080:8080 `
+  -v ${PWD}/data/input:/app/data/input `
+  -v ${PWD}/data/output:/app/data/output `
+  -v ${PWD}/logs:/app/logs `
+  av-catalog-converter</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h2>API Endpoints</h2>
+
+    <div class="endpoint">
+        <h3>Health Check</h3>
+        <p><strong>URL</strong>: <code>/api/health</code></p>
+        <p><strong>Method</strong>: <code>GET</code></p>
+        <p><strong>Description</strong>: Checks if the API is running properly</p>
+        <p><strong>Response</strong>: Basic information about the application status</p>
+        <div class="command-container">
+            <pre><code>curl http://localhost:8080/api/health</code></pre>
+            <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <h3>Upload File</h3>
+        <p><strong>URL</strong>: <code>/api/upload</code></p>
+        <p><strong>Method</strong>: <code>POST</code></p>
+        <p><strong>Description</strong>: Uploads and processes a catalog file</p>
+        <p><strong>Parameters</strong>:</p>
+        <ul>
+            <li><code>file</code>: The file to upload</li>
+            <li><code>format</code>: Output format (csv, excel, json)</li>
+        </ul>
+        <p><strong>Response</strong>: The processed file as an attachment</p>
+        <div class="command-container">
+            <pre><code>curl -F "file=@path/to/your/file.csv" -F "format=csv" http://localhost:8080/api/upload -o processed_file.csv</code></pre>
+            <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <h3>Analyze File</h3>
+        <p><strong>URL</strong>: <code>/api/analyze</code></p>
+        <p><strong>Method</strong>: <code>POST</code></p>
+        <p><strong>Description</strong>: Analyzes a file's structure without full processing</p>
+        <p><strong>Parameters</strong>:</p>
+        <ul>
+            <li><code>file</code>: The file to analyze</li>
+        </ul>
+        <p><strong>Response</strong>: JSON with file structure analysis</p>
+        <div class="command-container">
+            <pre><code>curl -F "file=@path/to/your/file.csv" http://localhost:8080/api/analyze</code></pre>
+            <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <h3>Map Fields</h3>
+        <p><strong>URL</strong>: <code>/api/map-fields</code></p>
+        <p><strong>Method</strong>: <code>POST</code></p>
+        <p><strong>Description</strong>: Maps fields from input columns to standardized format</p>
+        <p><strong>Parameters</strong>:</p>
+        <ul>
+            <li><code>columns</code>: Array of column names</li>
+            <li><code>sample_data</code>: Array of sample data objects</li>
+        </ul>
+        <p><strong>Response</strong>: JSON with field mappings</p>
+        <div class="command-container">
+            <pre><code>curl -X POST -H "Content-Type: application/json" -d '{"columns":["name","price","category"],"sample_data":[{"name":"Product 1","price":"$10.99","category":"Electronics"}]}' http://localhost:8080/api/map-fields</code></pre>
+            <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+        </div>
+    </div>
+
+    <h2>Project Structure</h2>
+    <div class="command-container">
+        <pre class="project-structure"><code>av-catalog-converter/
+├── app.py                  # Main application entry point
+├── config/                 # Configuration files
+├── core/                   # Core functionality
+│   ├── chunking/           # Data chunking modules
+│   ├── file_parser/        # File parsing modules
+│   └── llm/                # Language model clients
+├── prompts/                # LLM prompts and templates
+├── services/               # Business logic services
+│   ├── category/           # Category extraction
+│   ├── mapping/            # Field mapping
+│   ├── normalization/      # Value normalization
+│   └── structure/          # Structure analysis
+├── tests/                  # Test suite
+│   ├── integration/        # Integration tests
+│   └── unit/               # Unit tests
+├── utils/                  # Utility modules
+│   ├── caching/            # Caching utilities
+│   ├── error_handling/     # Error handling
+│   ├── helpers/            # Helper functions
+│   ├── logging/            # Logging utilities
+│   ├── parsers/            # Utility parsers
+│   └── profiling/          # Performance profiling
+├── web/                    # Web API components
+├── Dockerfile              # Docker configuration
+├── docker-compose.yml      # Docker Compose configuration
+├── install.py              # Installation script
+├── requirements.txt        # Dependencies
+├── run_tests.py            # Test runner
+└── setup.py                # Package setup</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h2>Key Components</h2>
+
+    <h3>File Parsers</h3>
+    <div class="component">
+        <p>The system supports multiple file formats through specialized parsers:</p>
+        <ul>
+            <li><strong>CSVParser</strong>: Handles CSV files with various delimiters</li>
+            <li><strong>ExcelParser</strong>: Processes Excel files (xls, xlsx)</li>
+            <li><strong>JSONParser</strong>: Parses JSON files and APIs</li>
+            <li><strong>XMLParser</strong>: Handles XML catalog formats</li>
+            <li><strong>PDFParser</strong>: Extracts tables from PDF files</li>
+        </ul>
+    </div>
+
+    <h3>Structure Analysis</h3>
+    <div class="component">
+        <ul>
+            <li><strong>StructureAnalyzer</strong>: Determines the overall structure of the data</li>
+            <li><strong>HeaderDetector</strong>: Identifies header rows in tabular data</li>
+            <li><strong>DataBoundaryDetector</strong>: Finds where actual data begins and ends</li>
+        </ul>
+    </div>
+
+    <h3>Field Mapping</h3>
+    <div class="component">
+        <ul>
+            <li><strong>FieldMapper</strong>: Orchestrates the mapping process</li>
+            <li><strong>DirectMapper</strong>: Maps fields based on exact or fuzzy name matches</li>
+            <li><strong>PatternMapper</strong>: Uses regex patterns to identify field types</li>
+            <li><strong>SemanticMapper</strong>: Uses ML to understand field semantics</li>
+        </ul>
+    </div>
+
+    <h3>Category Extraction</h3>
+    <div class="component">
+        <ul>
+            <li><strong>CategoryExtractor</strong>: Identifies product categories</li>
+            <li><strong>HierarchyAnalyzer</strong>: Analyzes category hierarchies</li>
+            <li><strong>TaxonomyMapper</strong>: Maps to standardized taxonomy</li>
+        </ul>
+    </div>
+
+    <h3>Value Normalization</h3>
+    <div class="component">
+        <ul>
+            <li><strong>ValueNormalizer</strong>: Orchestrates normalization of all values</li>
+            <li><strong>PriceNormalizer</strong>: Standardizes price formats and currencies</li>
+            <li><strong>TextNormalizer</strong>: Cleans and standardizes text fields</li>
+            <li><strong>UnitNormalizer</strong>: Converts units to standard formats</li>
+            <li><strong>IDNormalizer</strong>: Standardizes product IDs</li>
+        </ul>
+    </div>
+
+    <h2>Conclusion</h2>
+    <p>The AV Catalog Converter is a comprehensive solution for standardizing audio-visual equipment catalogs from various formats. With its modular design, it can be extended to support additional formats and standardization requirements. The system can be run as a web service or command-line tool, making it flexible for different use cases.</p>
+
+    <script>
+        function copyToClipboard(button) {
+            const pre = button.previousElementSibling;
+            const text = pre.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

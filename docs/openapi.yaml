@@ -1,0 +1,214 @@
+openapi: 3.0.0
+info:
+  title: AV Catalog Converter API
+  description: API for converting and standardizing audio-visual equipment catalogs
+  version: 1.0.0
+  contact:
+    name: Support
+    email: support@example.com
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Check if the API is running and get basic information
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is running properly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: 1.0.0
+                  app_name:
+                    type: string
+                    example: AV Catalog Converter
+  /api/upload:
+    post:
+      summary: Upload and process file
+      description: Upload a catalog file and convert it to a standardized format
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The catalog file to process
+                format:
+                  type: string
+                  enum: [csv, excel, json]
+                  default: csv
+                  description: Output format
+              required:
+                - file
+      responses:
+        '200':
+          description: File processed successfully
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Missing file or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/analyze:
+    post:
+      summary: Analyze file structure
+      description: Analyze a catalog file's structure without fully processing it
+      operationId: analyzeFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The catalog file to analyze
+              required:
+                - file
+      responses:
+        '200':
+          description: File analyzed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  structure:
+                    type: object
+                    properties:
+                      column_types:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          properties:
+                            type:
+                              type: string
+                      row_count:
+                        type: integer
+                      column_count:
+                        type: integer
+                  sample_data:
+                    type: array
+                    items:
+                      type: object
+                  columns:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Missing file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Analysis error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/map-fields:
+    post:
+      summary: Map fields
+      description: Map fields from input columns to standardized format
+      operationId: mapFields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                columns:
+                  type: array
+                  items:
+                    type: string
+                  description: Column names from the input file
+                sample_data:
+                  type: array
+                  items:
+                    type: object
+                  description: Sample rows from the input file
+              required:
+                - columns
+                - sample_data
+      responses:
+        '200':
+          description: Fields mapped successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mappings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        source_field:
+                          type: string
+                        target_field:
+                          type: string
+                        confidence:
+                          type: number
+                          format: float
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Mapping error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error
