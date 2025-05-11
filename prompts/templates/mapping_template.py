@@ -1,14 +1,15 @@
 # prompts/templates/mapping_template.py
 """
-Field mapping prompt templates
+Field mapping prompt templates for AV Catalog Converter
+Optimized for Phi-2 model
 """
 
 FIELD_MAPPING_TEMPLATE = """
-# Field Mapping Task
+# AV Catalog Field Mapping Task
 
-You are a field mapping expert for an AV (Audio-Visual) catalog standardization system. Your task is to map columns from an input catalog to our standard schema fields.
+You are a data mapping expert for an Audio-Visual equipment catalog standardization system. Your task is to map columns from an input catalog to our standardized schema fields.
 
-## Standard Schema Fields To Map
+## Standard Schema Fields
 {standard_fields}
 
 ## Input Catalog Columns
@@ -20,50 +21,57 @@ You are a field mapping expert for an AV (Audio-Visual) catalog standardization 
 ## Structure Information
 {structure_info}
 
-## Your Task
-Analyze the input columns and their content samples, then determine the best mapping to our standard schema fields.
+## Instructions
+1. Analyze the input columns and their content in the sample data
+2. Map each input column to the most appropriate target schema field
+3. Focus especially on the REQUIRED fields - these must be mapped
+4. Only map columns you're confident about (confidence > 0.6)
+5. If a column doesn't clearly match any target field, don't map it
 
+## Mapping Criteria
 For each standard field, identify the input column that best matches it based on:
-1. Name similarity
-2. Content patterns
-3. Data characteristics
+1. Name similarity (e.g., "product_id" → "SKU")
+2. Content patterns (e.g., alphanumeric codes → "SKU")
+3. Data characteristics (e.g., price values → price fields)
 4. Context within the catalog structure
 
-## Return Format
-Provide your mapping recommendations in JSON format with the following structure:
+## Output Format
+Return your mapping as a JSON object with this structure:
 ```json
 {
-  "mappings": {
-    "StandardField1": {
-      "column": "best_matching_input_column",
+  "field_mappings": {
+    "SKU": {
+      "column": "product_id",
+      "confidence": 0.95,
+      "reasoning": "Column contains unique alphanumeric product identifiers"
+    },
+    "Short Description": {
+      "column": "product_name",
       "confidence": 0.9,
-      "reasoning": "Brief explanation of why this mapping was chosen"
-    },
-    "StandardField2": {
-      "column": "best_matching_input_column",
-      "confidence": 0.7,
-      "reasoning": "Brief explanation of why this mapping was chosen"
-    },
-    ...
+      "reasoning": "Contains brief product descriptions"
+    }
   },
   "unmapped_standard_fields": [
-    "StandardFieldX",
-    "StandardFieldY"
+    "Document URL",
+    "MSRP EUR"
   ],
   "unmapped_input_columns": [
-    "InputColumnA",
-    "InputColumnB"
-  ],
-  "notes": "Additional observations or suggestions"
+    "created_date",
+    "internal_notes"
+  ]
 }
 ```
 
+## Confidence Scoring
 Confidence scores should range from 0.0 to 1.0, where:
-- 0.9-1.0: Very high confidence (exact match)
-- 0.7-0.9: High confidence (strong evidence)
-- 0.5-0.7: Medium confidence (reasonable evidence)
-- 0.3-0.5: Low confidence (weak evidence)
+- 0.9-1.0: Very high confidence (exact match or perfect pattern match)
+- 0.7-0.9: High confidence (strong evidence from content and naming)
+- 0.5-0.7: Medium confidence (reasonable evidence but some uncertainty)
+- 0.3-0.5: Low confidence (weak evidence, significant uncertainty)
 - 0.0-0.3: Very low confidence (guess based on limited evidence)
 
-Be thorough in your analysis and provide clear reasoning for each mapping decision.
+## Important Notes
+- The output CSV must include these columns in this exact order: SKU, Short Description, Long Description, Model, Category Group, Category, Manufacturer, Manufacturer SKU, Image URL, Document Name, Document URL, Unit Of Measure, Buy Cost, Trade Price, MSRP GBP, MSRP USD, MSRP EUR, Discontinued
+- Required fields (must be mapped): SKU, Short Description, Manufacturer, Trade Price
+- Provide clear reasoning for each mapping decision
 """

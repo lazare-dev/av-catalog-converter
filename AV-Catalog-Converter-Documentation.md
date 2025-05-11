@@ -260,6 +260,16 @@ The system supports multiple file formats through specialized parsers:
 - `UnitNormalizer`: Converts units to standard formats
 - `IDNormalizer`: Standardizes product IDs
 
+## Images and Diagrams
+
+**Note:** Architectural diagrams and workflow images are planned but not yet available. These will include:
+- Architecture Overview Diagram
+- Data Flow Diagram
+- Frontend Overview Diagram
+- Component Interaction Diagrams
+
+These diagrams will be added in a future documentation update to provide visual representations of the system architecture and workflows.
+
 ## Conclusion
 
 The AV Catalog Converter is a comprehensive solution for standardizing audio-visual equipment catalogs from various formats. With its modular design, it can be extended to support additional formats and standardization requirements. The system can be run as a web service or command-line tool, making it flexible for different use cases.

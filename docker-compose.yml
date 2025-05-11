@@ -12,9 +12,12 @@ services:
       - ./data/input:/app/data/input
       - ./data/output:/app/data/output
       - ./logs:/app/logs
+      - ./cache:/app/cache
     environment:
       - PYTHONPATH=/app
       - LOG_LEVEL=INFO
+      - TRANSFORMERS_CACHE=/app/cache/models
+      - TORCH_HOME=/app/cache/torch
     command: ["--api", "--port", "8080"]
     restart: unless-stopped
     healthcheck:

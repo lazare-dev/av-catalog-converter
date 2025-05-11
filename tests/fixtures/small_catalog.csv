@@ -1,0 +1,11 @@
+SKU,Product Name,Price,Category,Manufacturer,Description,Stock,Weight,Dimensions
+ABC123,HD Camera,299.99,Video,Sony,Professional HD camera with 4K recording,15,0.8,10x5x7
+DEF456,Wireless Mic,149.50,Audio,Shure,Professional wireless microphone system,25,0.3,5x2x2
+GHI789,Audio Mixer,499.00,Audio,Yamaha,16-channel audio mixer with USB interface,8,3.5,20x15x5
+JKL012,LED Light Panel,199.95,Lighting,Aputure,Bi-color LED light panel with remote control,12,1.2,30x30x5
+MNO345,HDMI Cable,19.99,Accessories,Belkin,High-speed HDMI cable (2m),50,0.2,200x0.5x0.5
+PQR678,Tripod,89.95,Accessories,Manfrotto,Professional aluminum tripod,20,1.5,70x10x10
+STU901,Shotgun Mic,249.00,Audio,Rode,Directional shotgun microphone,15,0.4,25x5x5
+VWX234,Video Monitor,399.00,Video,Blackmagic,7-inch HD video monitor,10,0.9,18x12x3
+YZA567,SD Card,29.99,Accessories,SanDisk,64GB high-speed SD card,100,0.01,3x2x0.1
+BCD890,Camera Bag,79.95,Accessories,Lowepro,Padded camera bag with compartments,30,1.0,40x30x20

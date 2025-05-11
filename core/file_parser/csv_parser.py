@@ -253,17 +253,58 @@ class CSVParser(BaseParser):
                             has_header=self.has_header)
 
             try:
-                # Try to read with detected parameters
-                df = pd.read_csv(
-                    self.file_path,
-                    encoding=encoding,
-                    delimiter=delimiter,
-                    header=header,
-                    low_memory=False,
-                    on_bad_lines='warn',
-                    skipinitialspace=True,
-                    skip_blank_lines=True
-                )
+                # Get file size for optimization decisions
+                import os
+                file_size = os.path.getsize(self.file_path)
+                large_file = file_size > 50 * 1024 * 1024  # 50MB threshold
+
+                # Optimize parsing for large files
+                if large_file:
+                    self.logger.info(f"Large file detected ({file_size/1024/1024:.1f} MB), using parallel processing")
+
+                    # Use parallel processing for large files
+                    from utils.parallel.parallel_processor import ParallelProcessor
+
+                    # Define preprocessing function for each chunk
+                    def preprocess_chunk(chunk):
+                        # Apply any chunk-specific preprocessing
+                        # For now, just return the chunk
+                        return chunk
+
+                    # Create parallel processor
+                    processor = ParallelProcessor(use_threads=True)  # Use threads for I/O-bound CSV reading
+
+                    # Process the file in parallel
+                    very_large_file = file_size > 500 * 1024 * 1024  # 500MB threshold for very large files
+                    chunk_size = 50000 if very_large_file else 100000  # Smaller chunks for very large files
+
+                    df = processor.process_file(
+                        self.file_path,
+                        process_func=preprocess_chunk,
+                        chunk_size=chunk_size,
+                        encoding=encoding,
+                        delimiter=delimiter,
+                        header=header,
+                        low_memory=True,
+                        on_bad_lines='warn',
+                        skipinitialspace=True,
+                        skip_blank_lines=True
+                    )
+                else:
+                    # Standard reading for smaller files
+                    df = pd.read_csv(
+                        self.file_path,
+                        encoding=encoding,
+                        delimiter=delimiter,
+                        header=header,
+                        low_memory=False,
+                        on_bad_lines='warn',
+                        skipinitialspace=True,
+                        skip_blank_lines=True,
+                        # Performance optimizations
+                        engine='c',  # Use faster C engine
+                        dtype_backend='numpy_nullable'  # More efficient memory usage
+                    )
 
                 # If no header was detected, create default column names
                 if not self.has_header:
@@ -273,9 +314,14 @@ class CSVParser(BaseParser):
                 # Apply common preprocessing
                 df = self.preprocess_dataframe(df)
 
-                self.logger.info("Successfully parsed CSV",
+                # Log performance metrics
+                import time
+                parsing_time = time.time() - self.logger.context_data.get('start_time', time.time())
+                self.logger.info(f"Successfully parsed CSV in {parsing_time:.2f}s",
                                 rows=len(df),
-                                columns=len(df.columns))
+                                columns=len(df.columns),
+                                file_size_mb=os.path.getsize(self.file_path)/1024/1024 if os.path.exists(self.file_path) else 0,
+                                parsing_speed_rows_per_sec=len(df)/parsing_time if parsing_time > 0 else 0)
                 return df
 
             except Exception as e:
@@ -312,6 +358,38 @@ class CSVParser(BaseParser):
 
                     # Last resort: try to read line by line
                     return self._parse_line_by_line()
+
+    def get_headers(self) -> List[str]:
+        """
+        Get the headers from the CSV file
+
+        Returns:
+            List[str]: List of header names
+        """
+        with self.logger.context(operation="get_headers"):
+            try:
+                # Auto-detect parameters if needed
+                encoding = self.encoding or self.detect_encoding()
+                delimiter = self.delimiter or self.detect_delimiter()
+                has_header = self.has_header if self.has_header is not None else self.detect_header()
+
+                # Read just the first row
+                df = pd.read_csv(
+                    self.file_path,
+                    encoding=encoding,
+                    delimiter=delimiter,
+                    header=0 if has_header else None,
+                    nrows=1
+                )
+
+                # Return column names
+                headers = list(df.columns)
+                self.logger.info(f"Retrieved {len(headers)} headers from CSV file")
+                return headers
+
+            except Exception as e:
+                self.logger.error(f"Error getting headers: {str(e)}", exc_info=True)
+                return []
 
     def _parse_line_by_line(self) -> pd.DataFrame:
         """

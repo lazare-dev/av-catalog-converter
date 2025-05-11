@@ -11,6 +11,12 @@ from pathlib import Path
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Import optimized component fixtures
+from tests.conftest_optimized import (
+    small_csv_file, medium_csv_file, small_excel_file, medium_excel_file,
+    mock_rate_limiter, mock_adaptive_cache, mock_phi_client, mock_parallel_processor
+)
+
 # Define fixtures that can be reused across tests
 
 @pytest.fixture

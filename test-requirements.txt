@@ -1,0 +1,21 @@
+# Test dependencies for local development
+# These versions are compatible with each other and should work on most systems
+
+# Core dependencies with fixed versions to avoid conflicts
+numpy==1.24.3
+pandas==1.5.3
+
+# Testing tools
+pytest==7.3.1
+pytest-cov==4.1.0
+pytest-xdist==3.3.1
+pytest-timeout==2.1.0
+coverage==7.2.7
+
+# ML dependencies with fixed versions
+torch==2.0.1
+transformers==4.30.2
+accelerate==0.20.3
+bitsandbytes==0.41.1
+sentencepiece==0.1.99
+protobuf==3.20.3

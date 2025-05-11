@@ -34,6 +34,18 @@ paths:
                   app_name:
                     type: string
                     example: AV Catalog Converter
+                  llm_info:
+                    type: object
+                    properties:
+                      model_id:
+                        type: string
+                        example: microsoft/phi-2
+                      quantization:
+                        type: string
+                        example: 4bit
+                      max_tokens:
+                        type: integer
+                        example: 1024
   /api/upload:
     post:
       summary: Upload and process file
@@ -133,6 +145,18 @@ paths:
                     type: array
                     items:
                       type: string
+                  llm_info:
+                    type: object
+                    properties:
+                      model_id:
+                        type: string
+                        example: microsoft/phi-2
+                      quantization:
+                        type: string
+                        example: 4bit
+                      max_tokens:
+                        type: integer
+                        example: 1024
         '400':
           description: Missing file
           content:
@@ -190,6 +214,20 @@ paths:
                         confidence:
                           type: number
                           format: float
+                        reasoning:
+                          type: string
+                  llm_stats:
+                    type: object
+                    properties:
+                      total_generations:
+                        type: integer
+                      total_tokens_generated:
+                        type: integer
+                      average_generation_time:
+                        type: number
+                        format: float
+                      cache_hits:
+                        type: integer
         '400':
           description: Invalid request data
           content:

@@ -24,6 +24,7 @@ from utils.helpers.validation_helpers import validate_output
 from utils.logging.progress_logger import ProgressLogger
 from utils.logging.logger import Logger
 from web.api.swagger import register_swagger
+from web.cors import add_cors_headers
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -33,6 +34,19 @@ app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 # Setup logging
 setup_logging(logging.INFO)
 logger = Logger.get_logger(__name__)
+
+# Initialize LLM components
+try:
+    from core.llm.llm_factory import LLMFactory
+    # Pre-initialize the LLM client to ensure it's ready for API requests
+    LLMFactory.create_client()
+    logger.info("LLM client initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing LLM client: {str(e)}")
+    logger.debug(traceback.format_exc())
+
+# Add CORS support
+add_cors_headers(app)
 
 # Register Swagger UI
 register_swagger(app)
@@ -175,6 +189,15 @@ def health_check():
             'timestamp': time.time(),
             'environment': os.environ.get('FLASK_ENV', 'production')
         }
+
+        # Add LLM information if available
+        try:
+            from core.llm.llm_factory import LLMFactory
+            client = LLMFactory.create_client()
+            if hasattr(client, 'get_model_info'):
+                app_info['llm_info'] = client.get_model_info()
+        except Exception as e:
+            logger.warning(f"Could not get LLM information: {str(e)}")
 
         # Log health check
         logger.info("Health check request",
@@ -397,6 +420,15 @@ def analyze_file():
                     }
                 }
 
+                # Add LLM information if available
+                try:
+                    from core.llm.llm_factory import LLMFactory
+                    client = LLMFactory.create_client()
+                    if hasattr(client, 'get_model_info'):
+                        analysis['llm_info'] = client.get_model_info()
+                except Exception as e:
+                    logger.warning(f"Could not get LLM information: {str(e)}")
+
                 return jsonify(analysis)
 
             except FileNotFoundError:
@@ -543,7 +575,8 @@ def map_fields():
                 mapping_results['request_info'] = {
                     'column_count': len(columns),
                     'sample_row_count': len(sample_data),
-                    'timestamp': time.time()
+                    'timestamp': time.time(),
+                    'llm_stats': field_mapper.llm_client.get_stats() if hasattr(field_mapper.llm_client, 'get_stats') else {}
                 }
 
                 return jsonify(mapping_results)

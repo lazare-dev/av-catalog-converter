@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, Any, List
 import tempfile
 import json
+import pandas as pd
 
 from flask import Flask, request, jsonify, send_from_directory, Blueprint
 from werkzeug.utils import secure_filename
@@ -40,34 +41,34 @@ active_jobs = {}
 def upload_file():
     """
     Handle file upload
-    
+
     Returns:
         JSON response with upload result
     """
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
-        
+
     file = request.files['file']
-    
+
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
-        
+
     # Secure filename and save
     filename = secure_filename(file.filename)
     file_path = os.path.join(UPLOAD_DIR, filename)
     file.save(file_path)
-    
+
     logger.info(f"File uploaded: {filename}")
-    
+
     # Try to parse the file to verify it's valid
     try:
         parser = ParserFactory.create_parser(file_path)
         sample = parser.get_sample(5)
-        
+
         # Generate job ID
         import uuid
         job_id = str(uuid.uuid4())
-        
+
         # Store job info
         active_jobs[job_id] = {
             'file_path': file_path,
@@ -76,7 +77,7 @@ def upload_file():
             'progress': 0,
             'sample_data': sample.to_dict() if not sample.empty else {}
         }
-        
+
         return jsonify({
             'success': True,
             'message': 'File uploaded successfully',
@@ -84,23 +85,23 @@ def upload_file():
             'filename': filename,
             'sample_data': sample.to_json(orient='records')
         })
-        
+
     except Exception as e:
         logger.error(f"Error parsing uploaded file: {str(e)}")
         return jsonify({'error': f'Invalid file format: {str(e)}'}), 400
 
-@api_bp.route('/api/analyze', methods=['POST'])
+@api_bp.route('/analyze', methods=['POST'])
 def analyze_file():
     """
     Analyze file structure
-    
-    Args:
-        job_id (str): Job ID
-        
+
     Returns:
         JSON response with analysis result
     """
     # Initialize job tracking
+    import uuid
+    from datetime import datetime
+
     job_id = str(uuid.uuid4())
     job = {
         'id': job_id,
@@ -109,55 +110,55 @@ def analyze_file():
         'created_at': datetime.now().isoformat(),
         'error': None
     }
-    
-    # Store job in jobs dictionary
-    jobs[job_id] = job
-    
+
+    # Store job in active_jobs dictionary
+    active_jobs[job_id] = job
+
     # Get file from request
     if 'file' not in request.files:
         job['status'] = 'error'
         job['error'] = 'No file provided'
         return jsonify({'error': 'No file provided'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         job['status'] = 'error'
         job['error'] = 'No file selected'
         return jsonify({'error': 'No file selected'}), 400
-    
+
     # Save file temporarily
     try:
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file_path = os.path.join(UPLOAD_DIR, filename)
         file.save(file_path)
         job['file_path'] = file_path
     except Exception as e:
         job['status'] = 'error'
         job['error'] = f'Error saving file: {str(e)}'
         return jsonify({'error': f'Error saving file: {str(e)}'}), 500
-    
+
     try:
         # Update job status
         job['status'] = 'analyzing'
-        
+
         # Parse file
         parser = ParserFactory.create_parser(file_path)
         data = parser.parse()
-        
+
         # Analyze structure
         progress_logger.start_task("Analyzing file structure")
         analyzer = StructureAnalyzer()
         structure_info = analyzer.analyze(data)
         progress_logger.complete_task("Structure analysis complete")
-        
+
         # Update job with structure info
         job['structure_info'] = structure_info
         job['status'] = 'analyzed'
         job['progress'] = 30
-        
+
         # Extract potential field mappings
         field_mappings = structure_info.get('possible_field_mappings', {})
-        
+
         return jsonify({
             'success': True,
             'message': 'File analyzed successfully',
@@ -165,76 +166,82 @@ def analyze_file():
             'column_info': structure_info.get('column_analysis', {}),
             'data_quality': structure_info.get('data_quality_issues', [])
         })
-        
+
     except Exception as e:
         logger.error(f"Error analyzing file: {str(e)}")
-        if job_id in jobs:
-            jobs[job_id]['status'] = 'error'
-            jobs[job_id]['error'] = str(e)
+        if job_id in active_jobs:
+            active_jobs[job_id]['status'] = 'error'
+            active_jobs[job_id]['error'] = str(e)
         return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
 
 @api_bp.route('/map/<job_id>', methods=['POST'])
 def map_fields(job_id):
     """
     Map fields to standard schema
-    
+
     Args:
         job_id (str): Job ID
-        
+
     Returns:
         JSON response with mapping result
     """
     if job_id not in active_jobs:
         return jsonify({'error': 'Invalid job ID'}), 404
-        
+
     job = active_jobs[job_id]
     file_path = job['file_path']
-    
+
     # Get user-specified mappings from request
     user_mappings = request.json.get('mappings', {})
-    
+
     try:
         # Update job status
         job['status'] = 'mapping'
-        
+
         # Parse file
         parser = ParserFactory.create_parser(file_path)
         data = parser.parse()
-        
+
         # Get structure info from job or analyze if not available
         structure_info = job.get('structure_info', {})
         if not structure_info:
             analyzer = StructureAnalyzer()
             structure_info = analyzer.analyze(data)
             job['structure_info'] = structure_info
-        
+
         # Map fields
         progress_logger.start_task("Mapping fields")
         field_mapper = FieldMapper()
-        
+
         # Inject user mappings if provided
         if user_mappings:
             field_mapper.user_mappings = user_mappings
-            
+
         mapped_data = field_mapper.map(data, structure_info)
         progress_logger.complete_task("Field mapping complete")
-        
+
         # Update job status
         job['status'] = 'mapped'
         job['progress'] = 60
         job['mapping_results'] = field_mapper.last_mapping_results
-        
+
         # Generate sample of mapped data
         sample = mapped_data.head(10).to_dict(orient='records')
-        
+
+        # Get LLM stats if available
+        llm_stats = {}
+        if hasattr(field_mapper.llm_client, 'get_stats'):
+            llm_stats = field_mapper.llm_client.get_stats()
+
         return jsonify({
             'success': True,
             'message': 'Fields mapped successfully',
             'mapping_results': field_mapper.last_mapping_results,
             'sample_data': sample,
-            'missing_required': field_mapper.last_mapping_results.get('missing_required', [])
+            'missing_required': field_mapper.last_mapping_results.get('missing_required', []),
+            'llm_stats': llm_stats
         })
-        
+
     except Exception as e:
         logger.error(f"Error mapping fields: {str(e)}")
         job['status'] = 'error'
@@ -245,43 +252,43 @@ def map_fields(job_id):
 def process_file(job_id):
     """
     Process the file through the entire pipeline
-    
+
     Args:
         job_id (str): Job ID
-        
+
     Returns:
         JSON response with processing result
     """
     if job_id not in active_jobs:
         return jsonify({'error': 'Invalid job ID'}), 404
-        
+
     job = active_jobs[job_id]
     file_path = job['file_path']
-    
+
     # Get configuration from request
     config = request.json or {}
     user_mappings = config.get('mappings', {})
     output_format = config.get('output_format', 'csv')
-    
+
     try:
         # Update job status
         job['status'] = 'processing'
         job['progress'] = 0
-        
+
         # Parse file
         progress_logger.start_task("Parsing input file")
         parser = ParserFactory.create_parser(file_path)
         data = parser.parse()
         progress_logger.complete_task("File parsed successfully")
         job['progress'] = 20
-        
+
         # Analyze structure
         progress_logger.start_task("Analyzing file structure")
         analyzer = StructureAnalyzer()
         structure_info = analyzer.analyze(data)
         progress_logger.complete_task("Structure analysis complete")
         job['progress'] = 40
-        
+
         # Map fields
         progress_logger.start_task("Mapping fields")
         field_mapper = FieldMapper()
@@ -290,50 +297,55 @@ def process_file(job_id):
         mapped_data = field_mapper.map(data, structure_info)
         progress_logger.complete_task("Field mapping complete")
         job['progress'] = 60
-        
+
+        # Store LLM stats if available
+        if hasattr(field_mapper.llm_client, 'get_stats'):
+            job['llm_stats'] = field_mapper.llm_client.get_stats()
+
         # Extract categories
         progress_logger.start_task("Extracting categories")
         category_extractor = CategoryExtractor()
         categorized_data = category_extractor.extract_categories(mapped_data)
         progress_logger.complete_task("Category extraction complete")
         job['progress'] = 80
-        
+
         # Normalize values
         progress_logger.start_task("Normalizing values")
         normalizer = ValueNormalizer()
         normalized_data = normalizer.normalize(categorized_data)
         progress_logger.complete_task("Value normalization complete")
-        
+
         # Validate output
         progress_logger.start_task("Validating output")
         validated_data = validate_output(normalized_data)
         progress_logger.complete_task("Validation complete")
         job['progress'] = 90
-        
+
         # Generate output file
         output_filename = f"{os.path.splitext(job['filename'])[0]}_standardized"
         output_path = os.path.join(UPLOAD_DIR, output_filename)
-        
+
         if output_format == 'csv':
             output_file = f"{output_path}.csv"
             validated_data.to_csv(output_file, index=False)
         else:  # excel
             output_file = f"{output_path}.xlsx"
             validated_data.to_excel(output_file, index=False)
-            
+
         # Update job status
         job['status'] = 'completed'
         job['progress'] = 100
         job['output_file'] = output_file
         job['output_format'] = output_format
-        
+
         return jsonify({
             'success': True,
             'message': 'File processed successfully',
             'output_file': os.path.basename(output_file),
-            'job_status': job['status']
+            'job_status': job['status'],
+            'llm_stats': job.get('llm_stats', {})
         })
-        
+
     except Exception as e:
         logger.error(f"Error processing file: {str(e)}")
         job['status'] = 'error'
@@ -344,24 +356,24 @@ def process_file(job_id):
 def download_file(job_id):
     """
     Download processed file
-    
+
     Args:
         job_id (str): Job ID
-        
+
     Returns:
         Processed file for download
     """
     if job_id not in active_jobs:
         return jsonify({'error': 'Invalid job ID'}), 404
-        
+
     job = active_jobs[job_id]
-    
+
     if job['status'] != 'completed' or 'output_file' not in job:
         return jsonify({'error': 'Output file not available'}), 400
-        
+
     output_file = job['output_file']
     filename = os.path.basename(output_file)
-    
+
     return send_from_directory(
         os.path.dirname(output_file),
         filename,
@@ -372,71 +384,70 @@ def download_file(job_id):
 def get_job_status(job_id):
     """
     Get job status
-    
+
     Args:
         job_id (str): Job ID
-        
+
     Returns:
         JSON response with job status
     """
     if job_id not in active_jobs:
         return jsonify({'error': 'Invalid job ID'}), 404
-        
+
     job = active_jobs[job_id]
-    
+
     return jsonify({
         'job_id': job_id,
         'status': job['status'],
         'progress': job['progress'],
         'filename': job['filename'],
-        'error': job.get('error')
+        'error': job.get('error'),
+        'llm_stats': job.get('llm_stats', {})
     })
 
 @api_bp.route('/preview/<job_id>', methods=['GET'])
 def preview_data(job_id):
     """
     Preview processed data
-    
+
     Args:
         job_id (str): Job ID
-        
+
     Returns:
         JSON response with data preview
     """
     if job_id not in active_jobs:
         return jsonify({'error': 'Invalid job ID'}), 404
-        
+
     job = active_jobs[job_id]
-    
+
     if job['status'] not in ['mapped', 'completed']:
         return jsonify({'error': 'Processed data not available'}), 400
-        
+
     try:
         # If completed, load from output file
         if job['status'] == 'completed' and 'output_file' in job:
             output_file = job['output_file']
-            
+
             if output_file.endswith('.csv'):
-                import pandas as pd
                 data = pd.read_csv(output_file)
             else:  # excel
-                import pandas as pd
                 data = pd.read_excel(output_file)
-                
+
             preview = data.head(50).to_dict(orient='records')
             columns = list(data.columns)
-            
+
         else:
             # Otherwise, use saved sample data
             preview = job.get('sample_data', {})
             columns = list(preview[0].keys()) if preview else []
-            
+
         return jsonify({
             'success': True,
             'preview': preview,
             'columns': columns
         })
-        
+
     except Exception as e:
         logger.error(f"Error generating preview: {str(e)}")
         return jsonify({'error': f'Preview failed: {str(e)}'}), 500
@@ -445,35 +456,35 @@ def preview_data(job_id):
 def cleanup_job(job_id):
     """
     Clean up job resources
-    
+
     Args:
         job_id (str): Job ID
-        
+
     Returns:
         JSON response with cleanup result
     """
     if job_id not in active_jobs:
         return jsonify({'error': 'Invalid job ID'}), 404
-        
+
     job = active_jobs[job_id]
-    
+
     try:
         # Remove input file
         if 'file_path' in job and os.path.exists(job['file_path']):
             os.remove(job['file_path'])
-            
+
         # Remove output file
         if 'output_file' in job and os.path.exists(job['output_file']):
             os.remove(job['output_file'])
-            
+
         # Remove job from active jobs
         del active_jobs[job_id]
-        
+
         return jsonify({
             'success': True,
             'message': 'Job cleaned up successfully'
         })
-        
+
     except Exception as e:
         logger.error(f"Error cleaning up job: {str(e)}")
         return jsonify({'error': f'Cleanup failed: {str(e)}'}), 500
