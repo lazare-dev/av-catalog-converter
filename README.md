@@ -320,7 +320,7 @@ The CI/CD pipeline configuration is in `.github/workflows/ci-cd.yml`.
 
 For detailed documentation on all aspects of the AV Catalog Converter, see:
 
-- [**HTML Documentation**](docs/html/index.html): Interactive, searchable documentation with copyable code examples
+- [**HTML Documentation**](https://lazare-dev.github.io/av-catalog-converter/docs/html/index.html): Interactive, searchable documentation with copyable code examples
 - [**Markdown Documentation**](docs/index.md): Comprehensive markdown documentation
 
 ### Component Documentation
