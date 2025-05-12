@@ -139,7 +139,7 @@
     </div>
 
     <h1>LLM Integration</h1>
-    
+
     <div class="toc">
         <h2>Table of Contents</h2>
         <ul>
@@ -149,6 +149,7 @@
                 <ul>
                     <li><a href="#llm-factory">LLM Factory</a></li>
                     <li><a href="#base-client">Base LLM Client</a></li>
+                    <li><a href="#gpt-client">GPT Client</a></li>
                     <li><a href="#phi-client">Phi Client</a></li>
                 </ul>
             </li>
@@ -167,18 +168,18 @@
 
     <h2 id="overview">Overview</h2>
     <p>
-        The AV Catalog Converter integrates with Microsoft's Phi-2 model to provide intelligent data processing capabilities.
+        The AV Catalog Converter integrates with OpenAI's GPT-2 model to provide intelligent data processing capabilities.
         This integration enables the application to perform complex tasks such as field mapping, category extraction, and data normalization
-        with a high degree of accuracy.
+        with a good balance of accuracy and performance.
     </p>
     <p>
         The LLM integration is designed to be:
     </p>
     <ul>
-        <li><strong>Efficient</strong> - Optimized for performance with caching and rate limiting</li>
-        <li><strong>Extensible</strong> - Easily extended to support additional models</li>
+        <li><strong>Efficient</strong> - Optimized for performance with adaptive caching and intelligent rate limiting</li>
+        <li><strong>Extensible</strong> - Easily extended to support additional models (including Phi-2)</li>
         <li><strong>Robust</strong> - Handles errors gracefully with fallback mechanisms</li>
-        <li><strong>Resource-conscious</strong> - Uses quantization to reduce memory footprint</li>
+        <li><strong>Resource-conscious</strong> - Uses smaller models and optimized memory settings for Docker compatibility</li>
     </ul>
 
     <h2 id="architecture">Architecture</h2>
@@ -190,14 +191,15 @@
         <ul>
             <li><strong>LLMFactory</strong> - Creates and manages LLM clients</li>
             <li><strong>BaseLLMClient</strong> - Abstract base class defining the interface</li>
-            <li><strong>PhiClient</strong> - Implementation for Microsoft's Phi-2 model</li>
+            <li><strong>GPTClient</strong> - Primary implementation for OpenAI's GPT-2 model</li>
+            <li><strong>PhiClient</strong> - Alternative implementation for Microsoft's Phi-2 model</li>
             <li><strong>AdaptiveCache</strong> - TTL-based caching for responses</li>
             <li><strong>RateLimiter</strong> - Token bucket-based rate limiting</li>
         </ul>
     </div>
 
     <h2 id="components">Components</h2>
-    
+
     <h3 id="llm-factory">LLM Factory</h3>
     <p>
         The <code>LLMFactory</code> class is responsible for creating and managing LLM clients. It implements the factory pattern
@@ -226,6 +228,22 @@
             <li><code>batch_generate(prompts)</code> - Generates responses for multiple prompts</li>
             <li><code>get_model_info()</code> - Returns information about the model</li>
             <li><code>cleanup()</code> - Releases resources used by the model</li>
+        </ul>
+    </div>
+
+    <h3 id="gpt-client">GPT Client</h3>
+    <p>
+        The <code>GPTClient</code> is the primary implementation of <code>BaseLLMClient</code> for OpenAI's GPT-2 model.
+        It is optimized for performance and Docker compatibility, making it ideal for production deployments.
+    </p>
+    <div class="component">
+        <h4>Key Features</h4>
+        <ul>
+            <li>Optimized for OpenAI's GPT-2 model</li>
+            <li>Lower memory footprint for Docker compatibility</li>
+            <li>Implements adaptive caching for better performance</li>
+            <li>Configurable rate limiting to prevent overloading</li>
+            <li>Efficient tokenization and response generation</li>
         </ul>
     </div>
 
@@ -259,7 +277,12 @@
         <tr>
             <td>model_id</td>
             <td>The model identifier</td>
-            <td>microsoft/phi-2</td>
+            <td>gpt2</td>
+        </tr>
+        <tr>
+            <td>model_type</td>
+            <td>The model type (gpt2 or phi)</td>
+            <td>gpt2</td>
         </tr>
         <tr>
             <td>quantization</td>
@@ -309,7 +332,7 @@
     </table>
 
     <h2 id="performance-optimization">Performance Optimization</h2>
-    
+
     <h3 id="caching">Caching</h3>
     <p>
         The LLM integration uses an adaptive caching mechanism to improve performance by avoiding redundant model calls.
@@ -331,7 +354,7 @@
         <h4>Rate Limiting Parameters</h4>
         <ul>
             <li><code>requests_per_minute</code> - Maximum number of requests per minute</li>
-            <li><code>burst_size</code> - Maximum number of requests that can be made in a burst</li>
+            <li><code>burst_size</code> - Maximum number of requests that can be made in a burst (default: 1000)</li>
             <li><code>token_cost_func</code> - Function to calculate token cost based on prompt length</li>
         </ul>
     </div>
@@ -381,11 +404,11 @@ class NewModelClient(BaseLLMClient):
     def initialize_model(self):
         # Implementation
         pass
-        
+
     def generate_response(self, prompt):
         # Implementation
         return "Response"
-        
+
     def batch_generate(self, prompts):
         # Implementation
         return ["Response 1", "Response 2"]
@@ -393,6 +416,7 @@ class NewModelClient(BaseLLMClient):
 # 2. Add to CLIENT_MAP in LLMFactory
 CLIENT_MAP = {
     "phi": PhiClient,
+    "gpt2": GPTClient,
     "new_model": NewModelClient,
 }</code></pre>
 
@@ -406,7 +430,7 @@ CLIENT_MAP = {
         function copyToClipboard(button) {
             const pre = button.previousElementSibling;
             const text = pre.textContent;
-            
+
             navigator.clipboard.writeText(text).then(() => {
                 const originalText = button.textContent;
                 button.textContent = 'Copied!';

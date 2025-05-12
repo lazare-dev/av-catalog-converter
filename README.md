@@ -7,13 +7,13 @@ A powerful tool for converting and standardizing audio-visual equipment catalogs
 ## Features
 
 - **Multi-Format Support**: Parse catalogs from multiple file formats (CSV, Excel, PDF, JSON, XML)
-- **Intelligent Field Mapping**: Automatically detect file structure and map fields to standard formats using LLM technology
+- **Intelligent Field Mapping**: Automatically detect file structure and map fields to standard formats using GPT-2 LLM technology
 - **Category Normalization**: Extract and normalize product categories into a standardized hierarchy
 - **Value Standardization**: Normalize prices, IDs, descriptions, and other text fields
 - **Flexible Export Options**: Export to CSV, Excel, or JSON formats with customizable options
 - **Web API**: RESTful API for integration with other systems
 - **React UI**: Modern web interface for easy file processing
-- **Performance Optimized**: Parallel processing, caching, and rate limiting for efficient operation
+- **Performance Optimized**: Parallel processing, adaptive caching, and intelligent rate limiting for efficient operation
 - **Extensible Architecture**: Easily add new parsers, normalizers, and export formats
 
 ## Installation
@@ -299,11 +299,17 @@ python run_tests.py --coverage              # Generate coverage report
 
 #### Customizing LLM Integration
 
+The application currently uses GPT-2 for LLM tasks, which provides a good balance of performance and efficiency. The LLM integration is modular and can be extended:
+
 1. Create a new LLM client in `core/llm/` that inherits from `BaseLLMClient`
-2. Implement the required methods (`generate()`, `get_embeddings()`)
+2. Implement the required methods (`generate_response()`, `batch_generate()`)
 3. Register the client in `core/llm/llm_factory.py`
 4. Update configuration settings in `config/settings.py`
 5. Write unit tests for the new LLM client
+
+Available LLM clients:
+- `GPTClient`: Optimized for OpenAI's GPT-2 model
+- `PhiClient`: Support for Microsoft's Phi-2 model (requires more memory)
 
 ### Continuous Integration and Deployment
 
@@ -342,7 +348,7 @@ Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) 
 
 ## Acknowledgements
 
-- This project uses [Microsoft's Phi-2](https://huggingface.co/microsoft/phi-2) for field mapping and text analysis
+- This project uses [OpenAI's GPT-2](https://huggingface.co/gpt2) for field mapping and text analysis
 - PDF parsing capabilities are provided by [PyPDF2](https://github.com/py-pdf/pypdf) and [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
 - The web interface is built with [React](https://reactjs.org/) and [Material-UI](https://mui.com/)
 - Special thanks to all contributors who have helped improve this project
