@@ -6,13 +6,13 @@ Generates prompts for mapping input columns to standardized schema fields
 from prompts.templates.mapping_template import FIELD_MAPPING_TEMPLATE
 from config.schema import REQUIRED_FIELDS
 
-def get_field_mapping_prompt(standard_fields: dict, input_columns: list,
+def get_field_mapping_prompt(standard_fields, input_columns: list,
                            column_samples: dict, structure_info: dict) -> str:
     """
     Generate field mapping prompt optimized for Phi-2 model
 
     Args:
-        standard_fields (dict): Standard field definitions to map to
+        standard_fields: Standard field definitions to map to (list or dict)
         input_columns (list): Input column names to map from
         column_samples (dict): Sample values for each input column
         structure_info (dict): Structure analysis information
@@ -22,25 +22,39 @@ def get_field_mapping_prompt(standard_fields: dict, input_columns: list,
     """
     # Format standard fields information with required fields highlighted
     standard_fields_str = "Standard fields to map (in output order):\n"
-    for field_name, field_info in standard_fields.items():
-        required_marker = " (REQUIRED)" if field_name in REQUIRED_FIELDS else ""
-        standard_fields_str += f"- {field_name}{required_marker}: {field_info.get('description', '')}\n"
 
-        # Add examples if available
-        examples = field_info.get('examples', [])
-        if examples and len(examples) > 0:
-            examples_str = ', '.join([str(ex) for ex in examples[:3] if ex])
-            if examples_str:
-                standard_fields_str += f"  Examples: {examples_str}\n"
+    # Handle different types of standard_fields input
+    if isinstance(standard_fields, dict):
+        # Dictionary format
+        for field_name, field_info in standard_fields.items():
+            required_marker = " (REQUIRED)" if field_name in REQUIRED_FIELDS else ""
+            description = field_info.get('description', '') if isinstance(field_info, dict) else ''
+            standard_fields_str += f"- {field_name}{required_marker}: {description}\n"
 
-        # Add mapping hints if available
-        if field_info.get('mapping_hints'):
-            hints = field_info.get('mapping_hints', [])
-            if len(hints) > 3:
-                hints = hints[:3]
-            hints_str = ', '.join([str(h) for h in hints if h])
-            if hints_str:
-                standard_fields_str += f"  Common column names: {hints_str}\n"
+            # Add examples if available
+            if isinstance(field_info, dict):
+                examples = field_info.get('examples', [])
+                if examples and len(examples) > 0:
+                    examples_str = ', '.join([str(ex) for ex in examples[:3] if ex])
+                    if examples_str:
+                        standard_fields_str += f"  Examples: {examples_str}\n"
+
+                # Add mapping hints if available
+                if field_info.get('mapping_hints'):
+                    hints = field_info.get('mapping_hints', [])
+                    if len(hints) > 3:
+                        hints = hints[:3]
+                    hints_str = ', '.join([str(h) for h in hints if h])
+                    if hints_str:
+                        standard_fields_str += f"  Common column names: {hints_str}\n"
+    elif isinstance(standard_fields, list):
+        # List format
+        for field_name in standard_fields:
+            required_marker = " (REQUIRED)" if field_name in REQUIRED_FIELDS else ""
+            standard_fields_str += f"- {field_name}{required_marker}\n"
+    else:
+        # Fallback for other formats
+        standard_fields_str += "- Unable to format standard fields\n"
 
     # Format input columns with more context
     input_columns_str = f"Input columns ({len(input_columns)}):\n"
@@ -92,7 +106,13 @@ def get_field_mapping_prompt(standard_fields: dict, input_columns: list,
         structure_info_str += "No detailed structure analysis available.\n"
 
     # Prepare prompt with all information
-    prompt = FIELD_MAPPING_TEMPLATE.format(
+    # Replace all placeholders that might be in the template but not in our format call
+    template = FIELD_MAPPING_TEMPLATE
+    for placeholder in ['{field_mappings}', '{unmapped_standard_fields}', '{unmapped_input_columns}']:
+        template = template.replace(placeholder, '')
+
+    # Format the template with our data
+    prompt = template.format(
         standard_fields=standard_fields_str,
         input_columns=input_columns_str,
         column_samples=column_samples_str,

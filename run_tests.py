@@ -7,6 +7,8 @@ import sys
 import subprocess
 import argparse
 import logging
+import importlib.util
+import platform
 
 # Setup basic logging
 logging.basicConfig(
@@ -14,6 +16,55 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+def check_environment():
+    """Check if the environment is properly set up for testing"""
+    # Check Python version
+    python_version = platform.python_version()
+    logging.info(f"Python version: {python_version}")
+
+    # Check if we're in a virtual environment
+    in_venv = sys.prefix != sys.base_prefix
+    logging.info(f"Running in virtual environment: {in_venv}")
+
+    # Check NumPy version
+    try:
+        import numpy
+        numpy_version = numpy.__version__
+        logging.info(f"NumPy version: {numpy_version}")
+
+        # Check if NumPy version is compatible
+        if numpy_version.startswith('2.'):
+            logging.warning("NumPy 2.x detected. This may cause compatibility issues with pandas 1.5.3.")
+            logging.warning("Consider using NumPy 1.24.3 as specified in requirements.txt")
+
+            # Ask user if they want to continue
+            if not os.environ.get('CONTINUE_WITH_NUMPY2', ''):
+                response = input("Continue with NumPy 2.x? (y/n): ").lower()
+                if response != 'y':
+                    logging.info("Exiting. Please install NumPy 1.24.3 and try again.")
+                    return False
+    except ImportError:
+        logging.warning("NumPy not found. Some tests may fail.")
+
+    # Check pandas version
+    try:
+        import pandas
+        pandas_version = pandas.__version__
+        logging.info(f"pandas version: {pandas_version}")
+
+        # Check if pandas version is compatible
+        if not pandas_version.startswith('1.5.'):
+            logging.warning(f"pandas {pandas_version} detected. This may cause compatibility issues.")
+            logging.warning("Consider using pandas 1.5.3 as specified in requirements.txt")
+    except ImportError:
+        logging.warning("pandas not found. Some tests may fail.")
+
+    # Check if pytest is installed
+    if importlib.util.find_spec("pytest") is None:
+        logging.error("pytest is not installed. Please install it with 'pip install pytest'")
+        return False
+
+    return True
 
 def main():
     """Main function to run tests"""
@@ -37,8 +88,16 @@ def main():
     execution_group.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     execution_group.add_argument('--no-parallel', dest='no_parallel', action='store_true', help='Disable parallel test execution')
     execution_group.add_argument('--timeout', type=int, default=300, help='Test timeout in seconds (default: 300)')
+    execution_group.add_argument('--skip-env-check', action='store_true', help='Skip environment compatibility check')
+    execution_group.add_argument('--force', '-f', action='store_true', help='Force test execution even if environment check fails')
 
     args = parser.parse_args()
+
+    # Check environment unless skipped
+    if not args.skip_env_check:
+        if not check_environment() and not args.force:
+            logging.error("Environment check failed. Use --force to run tests anyway.")
+            return 1
 
     # Default to all tests if no specific test type is specified
     if not (args.unit or args.integration or args.all):

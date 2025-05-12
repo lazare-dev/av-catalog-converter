@@ -31,19 +31,31 @@ class SemanticMapper:
         self.successful_mappings = 0
         self.failed_mappings = 0
 
-    def map_fields(self, data: pd.DataFrame, structure_info: Dict[str, Any] = None,
-                  already_mapped: List[str] = None) -> Dict[str, str]:
+    def map_fields(self, data: pd.DataFrame,
+                  standard_fields: List[str] = None,
+                  already_mapped: List[str] = None,
+                  manufacturer: str = None,
+                  structure_info: Dict[str, Any] = None) -> Dict[str, str]:
         """
         Map input columns to standard schema fields using semantic understanding
 
         Args:
             data (pd.DataFrame): Input data
-            structure_info (Dict[str, Any], optional): Structure analysis results
+            standard_fields (List[str], optional): Target standard field names
             already_mapped (List[str], optional): Fields already mapped
+            manufacturer (str, optional): Detected manufacturer name
+            structure_info (Dict[str, Any], optional): Structure analysis results
 
         Returns:
             Dict[str, str]: Mapping from input columns to standard fields
         """
+        # For backward compatibility
+        if standard_fields is None:
+            from config.schema import FIELD_ORDER
+            standard_fields = FIELD_ORDER.copy()
+
+        # Store FIELD_ORDER for later use
+        from config.schema import FIELD_ORDER
         self.total_mapping_requests += 1
 
         # Initialize parameters

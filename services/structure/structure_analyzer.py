@@ -84,6 +84,10 @@ class StructureAnalyzer:
         """
         column_types = {}
 
+        # Add row_count to the analysis
+        if "row_count" not in self.__dict__:
+            self.row_count = len(data)
+
         for col in data.columns:
             col_data = data[col].dropna()
 
@@ -137,6 +141,18 @@ class StructureAnalyzer:
             }
 
         return column_types
+
+    def _detect_column_types(self, data: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
+        """
+        Alias for _analyze_column_types for backward compatibility
+
+        Args:
+            data (pd.DataFrame): Input data
+
+        Returns:
+            Dict[str, Dict[str, Any]]: Column type information
+        """
+        return self._analyze_column_types(data)
 
     def _analyze_data_quality(self, data: pd.DataFrame) -> Dict[str, Any]:
         """
@@ -339,10 +355,8 @@ class StructureAnalyzer:
             # Return a minimal valid structure to avoid downstream errors
             return {
                 "ai_analysis_error": str(e),
-                "column_purpose": {},
-                "dataset_type": "unknown",
-                "primary_keys": [],
-                "data_organization": "unknown",
+                "column_analysis": {},
+                "structure_notes": "AI analysis failed: " + str(e),
                 "possible_field_mappings": {},
                 "data_quality_issues": ["AI analysis failed: " + str(e)]
             }
@@ -413,10 +427,8 @@ class StructureAnalyzer:
         """
         # Ensure all required keys are present
         required_keys = [
-            "column_purpose",
-            "dataset_type",
-            "primary_keys",
-            "data_organization",
+            "column_analysis",
+            "structure_notes",
             "possible_field_mappings",
             "data_quality_issues"
         ]
@@ -424,9 +436,9 @@ class StructureAnalyzer:
         for key in required_keys:
             if key not in ai_analysis:
                 self.logger.warning(f"Missing key in AI analysis: {key}")
-                if key in ["column_purpose", "possible_field_mappings", "data_quality_issues"]:
+                if key in ["column_analysis", "possible_field_mappings"]:
                     ai_analysis[key] = {}
-                elif key in ["primary_keys"]:
+                elif key in ["data_quality_issues"]:
                     ai_analysis[key] = []
                 else:
                     ai_analysis[key] = "Unknown"

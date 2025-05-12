@@ -1,5 +1,5 @@
-# Use Python 3.9 as the base image
-FROM python:3.9-slim
+# Use a smaller Python image
+FROM python:3.9-alpine
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -10,26 +10,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libmagic1 \
-    tesseract-ocr \
+RUN apk add --no-cache \
+    build-base \
     curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    libmagic \
+    tesseract-ocr \
+    git \
+    && rm -rf /var/cache/apk/*
 
 # Copy requirements file
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --upgrade pip
-# Install specific versions of numpy and pandas first to avoid conflicts
-RUN pip install numpy==1.24.3 pandas==1.5.3
-# Install the rest of the dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Install additional dependencies for LLM support
-RUN pip install --no-cache-dir accelerate==0.20.3 bitsandbytes==0.41.1 sentencepiece==0.1.99 protobuf==3.20.3
+RUN pip install --upgrade pip && \
+    # Install specific versions of numpy and pandas first to avoid conflicts
+    pip install numpy==1.24.3 pandas==1.5.3 && \
+    # Install the rest of the dependencies
+    pip install --no-cache-dir -r requirements.txt && \
+    # Install additional dependencies for LLM support
+    pip install --no-cache-dir accelerate==0.20.3 sentencepiece==0.1.99 protobuf==3.20.3
 
 # Copy the application code
 COPY . .

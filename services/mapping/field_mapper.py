@@ -24,6 +24,7 @@ class FieldMapper:
 
     def __init__(self):
         """Initialize the field mapper"""
+        self.logger = logging.getLogger(__name__)
         self.direct_mapper = DirectMapper()
         self.semantic_mapper = SemanticMapper()
         self.pattern_mapper = PatternMapper()

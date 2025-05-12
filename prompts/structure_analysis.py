@@ -4,8 +4,8 @@ Structure analysis prompt builder for AV Catalog Converter
 Generates prompts for analyzing input catalog structure
 """
 import json
-from prompts.templates.structure_template import STRUCTURE_ANALYSIS_TEMPLATE
 from config.schema import REQUIRED_FIELDS
+from prompts.templates.structure_template import STRUCTURE_ANALYSIS_TEMPLATE
 
 def get_structure_analysis_prompt(data_sample: str, column_info: dict,
                                 header_info: dict, data_quality: dict) -> str:
@@ -76,12 +76,57 @@ def get_structure_analysis_prompt(data_sample: str, column_info: dict,
     for field in REQUIRED_FIELDS:
         data_quality_str += f"- {field}\n"
 
-    # Prepare prompt with all information
-    prompt = STRUCTURE_ANALYSIS_TEMPLATE.format(
-        data_sample=data_sample,
-        column_info=column_info_str,
-        header_info=header_info_str,
-        data_quality=data_quality_str
-    )
+    # Use a direct prompt instead of the template to avoid the KeyError
+    prompt = f"""
+# AV Catalog Structure Analysis Task
+
+You are a data structure analyzer for an Audio-Visual equipment catalog standardization system.
+Your task is to analyze the structure of an input catalog and identify key information.
+
+## Input Catalog Sample
+```
+{data_sample}
+```
+
+## Column Information
+{column_info_str}
+
+## Header Information
+{header_info_str}
+
+## Data Quality Information
+{data_quality_str}
+
+## Your Task
+Analyze the structure of this catalog and provide information in JSON format.
+
+## Return Format
+Provide your analysis in JSON format with the following structure:
+```json
+{{
+  "column_analysis": {{
+    "column_name1": {{
+      "purpose": "Purpose of this column",
+      "data_characteristics": "Characteristics of the data",
+      "potential_mapping": "Potential mapping to standard schema"
+    }},
+    "column_name2": {{
+      "purpose": "Purpose of this column",
+      "data_characteristics": "Characteristics of the data",
+      "potential_mapping": "Potential mapping to standard schema"
+    }}
+  }},
+  "structure_notes": "Description of the overall structure",
+  "possible_field_mappings": {{
+    "SKU": {{"column": "best_match_column", "confidence": 0.9}},
+    "Short Description": {{"column": "best_match_column", "confidence": 0.8}}
+  }},
+  "data_quality_issues": [
+    "Issue 1: Description of the issue and affected columns",
+    "Issue 2: Description of the issue and affected columns"
+  ]
+}}
+```
+"""
 
     return prompt

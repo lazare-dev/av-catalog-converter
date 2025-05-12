@@ -18,6 +18,11 @@ services:
       - LOG_LEVEL=INFO
       - TRANSFORMERS_CACHE=/app/cache/models
       - TORCH_HOME=/app/cache/torch
+      # Test configuration
+      - SKIP_TESTS=true  # Set to false to run tests on startup
+      - CONTINUE_ON_TEST_FAILURE=true  # Set to false to stop on test failures
+    # Use the entrypoint script to handle test execution and app startup
+    entrypoint: ["/app/docker/entrypoint.sh"]
     command: ["--api", "--port", "8080"]
     restart: unless-stopped
     healthcheck:
