@@ -2,6 +2,7 @@
 """
 LLM provider factory for AV Catalog Converter
 Manages creation and caching of LLM clients
+Supports multiple model types including GPT-2 and Phi-2
 """
 import logging
 import traceback
@@ -9,14 +10,16 @@ from typing import Dict, Any, Optional, List
 
 from core.llm.base_client import BaseLLMClient
 from core.llm.phi_client import PhiClient
+from core.llm.gpt_client import GPTClient
 from config.settings import MODEL_CONFIG
 
 class LLMFactory:
     """Factory for creating and managing LLM clients"""
 
-    # Client mapping - currently only using Phi-2 model
+    # Client mapping for different model types
     CLIENT_MAP = {
         "phi": PhiClient,
+        "gpt2": GPTClient,
     }
 
     # Cache of initialized clients
@@ -26,24 +29,33 @@ class LLMFactory:
     _init_errors = {}
 
     @classmethod
-    def _get_model_type(cls, model_id: str) -> str:
+    def _get_model_type(cls, model_config: Dict[str, Any]) -> str:
         """
-        Determine model type from model ID
+        Determine model type from model configuration
 
         Args:
-            model_id (str): Model identifier
+            model_config (Dict[str, Any]): Model configuration
 
         Returns:
             str: Model type key
         """
-        model_id = model_id.lower()
+        # First check if model_type is explicitly specified
+        if "model_type" in model_config:
+            model_type = model_config["model_type"].lower()
+            if model_type in cls.CLIENT_MAP:
+                return model_type
+
+        # If not, try to infer from model_id
+        model_id = model_config.get("model_id", "").lower()
 
         # Map model ID to client type
         if "phi" in model_id:
             return "phi"
+        elif "gpt2" in model_id or "gpt-2" in model_id:
+            return "gpt2"
 
-        # Default to phi for now as it's our primary model
-        return "phi"
+        # Default to gpt2 as it's more widely compatible
+        return "gpt2"
 
     # Track initialization time
     _init_time = 0
@@ -86,13 +98,12 @@ class LLMFactory:
             # Remove from error cache to allow retry
             del cls._init_errors[cache_key]
 
-        # Determine model type
-        model_id = config.get("model_id", "")
-        model_type = cls._get_model_type(model_id)
+        # Determine model type from the config
+        model_type = cls._get_model_type(config)
 
         if model_type not in cls.CLIENT_MAP:
-            logger.warning(f"Unsupported model type: {model_type}, falling back to Phi-2 model")
-            model_type = "phi"
+            logger.warning(f"Unsupported model type: {model_type}, falling back to GPT-2 model")
+            model_type = "gpt2"
 
         # Get client class
         client_class = cls.CLIENT_MAP[model_type]

@@ -37,6 +37,36 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Active processing jobs
 active_jobs = {}
 
+@api_bp.route('/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint
+
+    Returns:
+        JSON response with health status
+    """
+    from config.settings import APP_CONFIG
+    import time
+
+    # Get application information
+    app_info = {
+        'status': 'ok',
+        'version': APP_CONFIG['version'],
+        'app_name': APP_CONFIG['app_name'],
+        'timestamp': time.time(),
+        'environment': os.environ.get('FLASK_ENV', 'production')
+    }
+
+    # Add LLM information if available
+    try:
+        from core.llm.llm_factory import LLMFactory
+        llm_stats = LLMFactory.get_stats()
+        app_info['llm_info'] = llm_stats
+    except Exception as e:
+        logger.warning(f"Could not get LLM information: {str(e)}")
+
+    return jsonify(app_info)
+
 @api_bp.route('/upload', methods=['POST'])
 def upload_file():
     """

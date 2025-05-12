@@ -80,6 +80,22 @@ class TestImports:
         assert hasattr(instance, 'rate_limiter')
         assert hasattr(instance, 'cache')
 
+    def test_gpt_client_imports(self):
+        """Test importing the GPTClient"""
+        # Import the class
+        from core.llm.gpt_client import GPTClient
+
+        # Check that the class has the expected methods
+        assert hasattr(GPTClient, 'generate_response')
+        assert hasattr(GPTClient, 'batch_generate')
+        assert hasattr(GPTClient, 'get_stats')
+
+        # Create an instance to check instance attributes
+        # We can't check class attributes since they're set in __init__
+        instance = GPTClient({"model_id": "test"})
+        assert hasattr(instance, 'rate_limiter')
+        assert hasattr(instance, 'cache')
+
     def test_llm_factory_imports(self):
         """Test importing the LLMFactory"""
         # Import the class
@@ -92,6 +108,10 @@ class TestImports:
 
         # Check that the class has the new attributes
         assert hasattr(LLMFactory, '_init_time')
+
+        # Check that the CLIENT_MAP includes both Phi and GPT-2
+        assert "phi" in LLMFactory.CLIENT_MAP
+        assert "gpt2" in LLMFactory.CLIENT_MAP
 
     def test_csv_parser_imports(self):
         """Test importing the CSVParser"""

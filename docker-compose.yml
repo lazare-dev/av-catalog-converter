@@ -18,6 +18,8 @@ services:
       - LOG_LEVEL=INFO
       - TRANSFORMERS_CACHE=/app/cache/models
       - TORCH_HOME=/app/cache/torch
+      - OMP_NUM_THREADS=4
+      - TOKENIZERS_PARALLELISM=true
       # Test configuration
       - SKIP_TESTS=true  # Set to false to run tests on startup
       - CONTINUE_ON_TEST_FAILURE=true  # Set to false to stop on test failures
@@ -25,12 +27,21 @@ services:
     entrypoint: ["/app/docker/entrypoint.sh"]
     command: ["--api", "--port", "8080"]
     restart: unless-stopped
+    # Allocate more resources to the container
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 30s
 
   # Uncomment to add a database if needed
   # db:

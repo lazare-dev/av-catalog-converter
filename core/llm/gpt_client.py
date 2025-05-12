@@ -1,7 +1,7 @@
-# core/llm/phi_client.py
+# core/llm/gpt_client.py
 """
-Phi-specific LLM implementation for AV Catalog Converter
-Optimized for Microsoft's Phi-2 model
+GPT-specific LLM implementation for AV Catalog Converter
+Optimized for OpenAI's GPT-2 model
 """
 import logging
 import time
@@ -10,23 +10,17 @@ from typing import Dict, Any, List
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-# Check if BitsAndBytesConfig is available (newer versions of transformers)
-try:
-    from transformers import BitsAndBytesConfig
-    BITSANDBYTES_AVAILABLE = True
-except ImportError:
-    BITSANDBYTES_AVAILABLE = False
 
 from core.llm.base_client import BaseLLMClient
 from utils.caching.adaptive_cache import AdaptiveCache
 from utils.rate_limiting.rate_limiter import RateLimiter
 
-class PhiClient(BaseLLMClient):
-    """Client for Microsoft's Phi models"""
+class GPTClient(BaseLLMClient):
+    """Client for OpenAI's GPT-2 models"""
 
     def __init__(self, model_config: Dict[str, Any]):
         """
-        Initialize the Phi client
+        Initialize the GPT client
 
         Args:
             model_config (Dict[str, Any]): Model configuration
@@ -39,9 +33,17 @@ class PhiClient(BaseLLMClient):
         self._is_initialized = False
         self._initialization_error = None
 
+        # Initialize counters for statistics
+        self.total_generations = 0
+        self.total_tokens_generated = 0
+        self.total_generation_time = 0
+        self.cache_hits = 0
+        self.rate_limited_count = 0
+        self.rate_limited_wait_time = 0
+
         # Setup cache if enabled
         self.cache = None
-        if model_config.get("cache_enabled", True):  # Default to True for better performance
+        if model_config.get("cache_enabled", True):
             # Get cache configuration
             cache_type = model_config.get("cache_type", "adaptive")
             base_ttl = model_config.get("cache_ttl", 3600)  # Default: 1 hour
@@ -61,22 +63,22 @@ class PhiClient(BaseLLMClient):
                 self.logger.info(f"Standard LLM response caching enabled (TTL: {base_ttl}s)")
 
         # Set default parameters if not provided
-        self.max_new_tokens = model_config.get("max_new_tokens", 512)
-        self.temperature = model_config.get("temperature", 0.3)
-        self.top_p = model_config.get("top_p", 0.95)
-        self.repetition_penalty = model_config.get("repetition_penalty", 1.1)
+        self.max_new_tokens = model_config.get("max_new_tokens", 128)
+        self.temperature = model_config.get("temperature", 0.1)
+        self.top_p = model_config.get("top_p", 0.9)
+        self.repetition_penalty = model_config.get("repetition_penalty", 1.0)
 
         # Setup rate limiting
         self.rate_limiter = None
-        if model_config.get("rate_limiting_enabled", True):  # Default to True for API protection
+        if model_config.get("rate_limiting_enabled", True):
             # Calculate token cost based on prompt length
             def token_cost_func(prompt):
                 # Estimate token count (rough approximation)
                 return max(1, len(prompt) // 4)
 
             # Get rate limiting parameters
-            requests_per_minute = model_config.get("requests_per_minute", 60)  # Default: 1 request per second
-            burst_size = model_config.get("burst_size", 10)  # Default: 10 requests burst
+            requests_per_minute = model_config.get("requests_per_minute", 60)
+            burst_size = model_config.get("burst_size", 1000)  # Increased to handle larger prompts
 
             self.rate_limiter = RateLimiter(
                 requests_per_minute=requests_per_minute,
@@ -85,17 +87,9 @@ class PhiClient(BaseLLMClient):
             )
             self.logger.info(f"Rate limiting enabled: {requests_per_minute} requests/minute, burst size: {burst_size}")
 
-        # Track generation stats
-        self.total_generations = 0
-        self.total_tokens_generated = 0
-        self.total_generation_time = 0
-        self.cache_hits = 0
-        self.rate_limited_count = 0
-        self.rate_limited_wait_time = 0.0
-
     def initialize_model(self):
         """
-        Initialize and load the Phi model
+        Initialize and load the GPT-2 model
         """
         if self._is_initialized:
             return
@@ -103,21 +97,18 @@ class PhiClient(BaseLLMClient):
         if self._initialization_error:
             self.logger.warning(f"Previous initialization failed: {self._initialization_error}")
 
-        self.logger.info(f"Initializing Phi model: {self.model_config['model_id']}")
+        self.logger.info(f"Initializing GPT model: {self.model_config['model_id']}")
 
         try:
-            # Configure quantization if specified - but we'll use it only in the fallback approach
-            quantization = self.model_config.get("quantization")
-            self.logger.info(f"Quantization setting: {quantization}")
-
-            # We'll skip quantization for the initial attempt to improve compatibility
-
             # Load tokenizer with proper error handling
             try:
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     self.model_config["model_id"],
                     use_fast=True
                 )
+                # Ensure the tokenizer has padding token
+                if self.tokenizer.pad_token is None:
+                    self.tokenizer.pad_token = self.tokenizer.eos_token
             except Exception as tokenizer_error:
                 self.logger.error(f"Error loading tokenizer: {str(tokenizer_error)}")
                 self.logger.debug(traceback.format_exc())
@@ -126,47 +117,31 @@ class PhiClient(BaseLLMClient):
             # Load model with proper error handling and memory optimization
             try:
                 # Set low_cpu_mem_usage to True for better memory management
-                # Add more detailed error logging
                 self.logger.info(f"Loading model {self.model_config['model_id']} with device_map={self.model_config.get('device_map', 'auto')}")
 
                 # Print available memory
                 import psutil
                 self.logger.info(f"Available memory: {psutil.virtual_memory().available / (1024 * 1024 * 1024):.2f} GB")
 
-                # Try to load with more conservative settings
+                # Load the model with conservative settings
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_config["model_id"],
-                    device_map=self.model_config.get("device_map", "auto"),
-                    torch_dtype=torch.float32,  # Use float32 instead of float16 for better compatibility
-                    trust_remote_code=True,
+                    device_map=self.model_config.get("device_map", "cpu"),
+                    torch_dtype=torch.float32,  # Use float32 for better compatibility
                     low_cpu_mem_usage=True
                 )
                 self.logger.info(f"Model loaded successfully")
             except Exception as model_error:
                 self.logger.error(f"Error loading model: {str(model_error)}")
                 self.logger.debug(traceback.format_exc())
-                # Try a fallback approach with even more conservative settings
-                try:
-                    self.logger.info("Trying fallback approach with CPU only")
-                    self.model = AutoModelForCausalLM.from_pretrained(
-                        self.model_config["model_id"],
-                        device_map="cpu",
-                        torch_dtype=torch.float32,
-                        trust_remote_code=True,
-                        low_cpu_mem_usage=True
-                    )
-                    self.logger.info("Model loaded successfully with fallback approach")
-                except Exception as fallback_error:
-                    self.logger.error(f"Fallback approach also failed: {str(fallback_error)}")
-                    self.logger.debug(traceback.format_exc())
-                    raise RuntimeError(f"Failed to load model: {str(model_error)}")
+                raise RuntimeError(f"Failed to load model: {str(model_error)}")
 
             self._is_initialized = True
             self._initialization_error = None
-            self.logger.info(f"Phi model initialized successfully")
+            self.logger.info(f"GPT model initialized successfully")
 
         except Exception as e:
-            error_msg = f"Error initializing Phi model: {str(e)}"
+            error_msg = f"Error initializing GPT model: {str(e)}"
             self.logger.error(error_msg)
             self.logger.debug(traceback.format_exc())
             self._initialization_error = str(e)
@@ -174,7 +149,7 @@ class PhiClient(BaseLLMClient):
 
     def _format_prompt(self, prompt: str) -> str:
         """
-        Format the prompt for the Phi model
+        Format the prompt for the GPT-2 model
 
         Args:
             prompt (str): Raw prompt
@@ -182,8 +157,8 @@ class PhiClient(BaseLLMClient):
         Returns:
             str: Formatted prompt
         """
-        # Phi-2 works well with this simple instruction format
-        return f"Instruction: {prompt}\n\nResponse:"
+        # GPT-2 works well with a simple prompt format
+        return f"{prompt}\n"
 
     def _extract_response(self, generated_text: str, formatted_prompt: str) -> str:
         """
@@ -207,7 +182,7 @@ class PhiClient(BaseLLMClient):
 
     def generate_response(self, prompt: str) -> str:
         """
-        Generate a response from the Phi model
+        Generate a response from the GPT-2 model
 
         Args:
             prompt (str): Input prompt
@@ -236,7 +211,7 @@ class PhiClient(BaseLLMClient):
         if not self._is_initialized:
             return f"Error: Model not initialized. Previous error: {self._initialization_error}"
 
-        # Format prompt for Phi
+        # Format prompt for GPT-2
         formatted_prompt = self._format_prompt(prompt)
 
         # Apply rate limiting if enabled
@@ -258,19 +233,18 @@ class PhiClient(BaseLLMClient):
 
         try:
             # Tokenize input with optimized settings
-            inputs = self.tokenizer(formatted_prompt,
-                                   return_tensors="pt",
-                                   padding=True,
-                                   truncation=True,
-                                   max_length=self.model_config.get("max_input_length", 1024))
+            input_ids = self.tokenizer.encode(formatted_prompt,
+                                            return_tensors="pt",
+                                            truncation=True,
+                                            max_length=self.model_config.get("max_input_length", 512))
 
             # Check if model is available
             if self.model is None:
                 return "Error: Model not loaded properly"
 
             # Move inputs to the same device as the model
-            inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
-            input_tokens = len(inputs.input_ids[0])
+            input_ids = input_ids.to(self.model.device)
+            input_tokens = len(input_ids[0])
 
             # Generate response
             start_time = time.time()
@@ -278,7 +252,7 @@ class PhiClient(BaseLLMClient):
             # Use inference mode for better performance
             with torch.inference_mode():
                 outputs = self.model.generate(
-                    inputs.input_ids,
+                    input_ids,
                     max_new_tokens=self.max_new_tokens,
                     temperature=self.temperature,
                     top_p=self.top_p,
@@ -287,8 +261,8 @@ class PhiClient(BaseLLMClient):
                     pad_token_id=self.tokenizer.eos_token_id,
                     # Performance optimizations
                     use_cache=True,
-                    num_beams=self.model_config.get("num_beams", 1),
-                    early_stopping=True if self.model_config.get("num_beams", 1) > 1 else False
+                    num_beams=1,
+                    early_stopping=False
                 )
 
             generation_time = time.time() - start_time
@@ -355,8 +329,8 @@ class PhiClient(BaseLLMClient):
             "cache_hits": self.cache_hits,
             "model_id": self.model_config.get("model_id", "unknown"),
             "is_initialized": self._is_initialized,
-            "rate_limited_count": getattr(self, 'rate_limited_count', 0),
-            "rate_limited_wait_time": getattr(self, 'rate_limited_wait_time', 0.0)
+            "rate_limited_count": self.rate_limited_count,
+            "rate_limited_wait_time": self.rate_limited_wait_time
         }
 
         # Add rate limiter stats if available
@@ -368,12 +342,12 @@ class PhiClient(BaseLLMClient):
 
     def cleanup(self):
         """
-        Release resources used by the Phi model
+        Release resources used by the GPT model
         """
         if not self._is_initialized:
             return
 
-        self.logger.info("Cleaning up Phi model resources")
+        self.logger.info("Cleaning up GPT model resources")
 
         try:
             # Delete model and tokenizer
@@ -394,8 +368,8 @@ class PhiClient(BaseLLMClient):
                 torch.cuda.empty_cache()
 
             self._is_initialized = False
-            self.logger.info("Phi model resources cleaned up successfully")
+            self.logger.info("GPT model resources cleaned up successfully")
 
         except Exception as e:
-            self.logger.error(f"Error cleaning up Phi model: {str(e)}")
+            self.logger.error(f"Error cleaning up GPT model: {str(e)}")
             self.logger.debug(traceback.format_exc())

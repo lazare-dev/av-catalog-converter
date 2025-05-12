@@ -302,8 +302,7 @@ class CSVParser(BaseParser):
                         skipinitialspace=True,
                         skip_blank_lines=True,
                         # Performance optimizations
-                        engine='c',  # Use faster C engine
-                        dtype_backend='numpy_nullable'  # More efficient memory usage
+                        engine='c'  # Use faster C engine
                     )
 
                 # If no header was detected, create default column names
