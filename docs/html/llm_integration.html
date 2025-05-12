@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Integration - AV Catalog Converter Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            margin-top: 25px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow: auto;
+            position: relative;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background-color: #2980b9;
+        }
+        .command-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        .endpoint {
+            background-color: #f0f7fb;
+            border-left: 5px solid #3498db;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .project-structure {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            line-height: 1.3;
+        }
+        .component {
+            background-color: #f9f9f9;
+            border-left: 3px solid #2ecc71;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .note {
+            background-color: #fff8dc;
+            border-left: 5px solid #f1c40f;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .warning {
+            background-color: #ffebee;
+            border-left: 5px solid #f44336;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #eaecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        .toc li {
+            margin-bottom: 5px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="index.html">Home</a> &gt; LLM Integration
+    </div>
+
+    <h1>LLM Integration</h1>
+    
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#components">Components</a>
+                <ul>
+                    <li><a href="#llm-factory">LLM Factory</a></li>
+                    <li><a href="#base-client">Base LLM Client</a></li>
+                    <li><a href="#phi-client">Phi Client</a></li>
+                </ul>
+            </li>
+            <li><a href="#configuration">Configuration</a></li>
+            <li><a href="#performance-optimization">Performance Optimization</a>
+                <ul>
+                    <li><a href="#caching">Caching</a></li>
+                    <li><a href="#rate-limiting">Rate Limiting</a></li>
+                    <li><a href="#quantization">Model Quantization</a></li>
+                </ul>
+            </li>
+            <li><a href="#usage">Usage Examples</a></li>
+            <li><a href="#extending">Extending with New Models</a></li>
+        </ul>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <p>
+        The AV Catalog Converter integrates with Microsoft's Phi-2 model to provide intelligent data processing capabilities.
+        This integration enables the application to perform complex tasks such as field mapping, category extraction, and data normalization
+        with a high degree of accuracy.
+    </p>
+    <p>
+        The LLM integration is designed to be:
+    </p>
+    <ul>
+        <li><strong>Efficient</strong> - Optimized for performance with caching and rate limiting</li>
+        <li><strong>Extensible</strong> - Easily extended to support additional models</li>
+        <li><strong>Robust</strong> - Handles errors gracefully with fallback mechanisms</li>
+        <li><strong>Resource-conscious</strong> - Uses quantization to reduce memory footprint</li>
+    </ul>
+
+    <h2 id="architecture">Architecture</h2>
+    <p>
+        The LLM integration follows a factory pattern with a clear separation of concerns:
+    </p>
+    <div class="component">
+        <h3>Architecture Components</h3>
+        <ul>
+            <li><strong>LLMFactory</strong> - Creates and manages LLM clients</li>
+            <li><strong>BaseLLMClient</strong> - Abstract base class defining the interface</li>
+            <li><strong>PhiClient</strong> - Implementation for Microsoft's Phi-2 model</li>
+            <li><strong>AdaptiveCache</strong> - TTL-based caching for responses</li>
+            <li><strong>RateLimiter</strong> - Token bucket-based rate limiting</li>
+        </ul>
+    </div>
+
+    <h2 id="components">Components</h2>
+    
+    <h3 id="llm-factory">LLM Factory</h3>
+    <p>
+        The <code>LLMFactory</code> class is responsible for creating and managing LLM clients. It implements the factory pattern
+        to abstract away the details of client creation and provides caching of initialized clients for better performance.
+    </p>
+    <div class="component">
+        <h4>Key Features</h4>
+        <ul>
+            <li>Client caching to avoid recreating clients</li>
+            <li>Error tracking and fallback mechanisms</li>
+            <li>Support for multiple model types</li>
+            <li>Resource cleanup</li>
+        </ul>
+    </div>
+
+    <h3 id="base-client">Base LLM Client</h3>
+    <p>
+        The <code>BaseLLMClient</code> is an abstract base class that defines the interface for all LLM clients.
+        It provides common functionality and ensures that all implementations follow a consistent pattern.
+    </p>
+    <div class="component">
+        <h4>Key Methods</h4>
+        <ul>
+            <li><code>initialize_model()</code> - Loads and initializes the model</li>
+            <li><code>generate_response(prompt)</code> - Generates a response for a given prompt</li>
+            <li><code>batch_generate(prompts)</code> - Generates responses for multiple prompts</li>
+            <li><code>get_model_info()</code> - Returns information about the model</li>
+            <li><code>cleanup()</code> - Releases resources used by the model</li>
+        </ul>
+    </div>
+
+    <h3 id="phi-client">Phi Client</h3>
+    <p>
+        The <code>PhiClient</code> is an implementation of <code>BaseLLMClient</code> for Microsoft's Phi-2 model.
+        It handles the specifics of working with the Phi model, including prompt formatting, response extraction,
+        and performance optimization.
+    </p>
+    <div class="component">
+        <h4>Key Features</h4>
+        <ul>
+            <li>Optimized for Microsoft's Phi-2 model</li>
+            <li>Supports model quantization (4-bit and 8-bit)</li>
+            <li>Implements caching and rate limiting</li>
+            <li>Tracks usage statistics</li>
+            <li>Handles prompt formatting and response extraction</li>
+        </ul>
+    </div>
+
+    <h2 id="configuration">Configuration</h2>
+    <p>
+        The LLM integration can be configured through the <code>MODEL_CONFIG</code> dictionary in <code>config/settings.py</code>.
+    </p>
+    <table>
+        <tr>
+            <th>Parameter</th>
+            <th>Description</th>
+            <th>Default</th>
+        </tr>
+        <tr>
+            <td>model_id</td>
+            <td>The model identifier</td>
+            <td>microsoft/phi-2</td>
+        </tr>
+        <tr>
+            <td>quantization</td>
+            <td>Quantization level (4bit, 8bit, or null)</td>
+            <td>null</td>
+        </tr>
+        <tr>
+            <td>max_new_tokens</td>
+            <td>Maximum number of tokens to generate</td>
+            <td>512</td>
+        </tr>
+        <tr>
+            <td>temperature</td>
+            <td>Sampling temperature</td>
+            <td>0.3</td>
+        </tr>
+        <tr>
+            <td>top_p</td>
+            <td>Top-p sampling parameter</td>
+            <td>0.95</td>
+        </tr>
+        <tr>
+            <td>repetition_penalty</td>
+            <td>Penalty for repeating tokens</td>
+            <td>1.1</td>
+        </tr>
+        <tr>
+            <td>cache_enabled</td>
+            <td>Whether to enable response caching</td>
+            <td>true</td>
+        </tr>
+        <tr>
+            <td>cache_ttl</td>
+            <td>Cache TTL in seconds</td>
+            <td>3600</td>
+        </tr>
+        <tr>
+            <td>rate_limiting_enabled</td>
+            <td>Whether to enable rate limiting</td>
+            <td>true</td>
+        </tr>
+        <tr>
+            <td>requests_per_minute</td>
+            <td>Maximum requests per minute</td>
+            <td>60</td>
+        </tr>
+    </table>
+
+    <h2 id="performance-optimization">Performance Optimization</h2>
+    
+    <h3 id="caching">Caching</h3>
+    <p>
+        The LLM integration uses an adaptive caching mechanism to improve performance by avoiding redundant model calls.
+        The cache is TTL-based, with the TTL adjustable based on usage patterns.
+    </p>
+    <div class="note">
+        <p>
+            The adaptive cache automatically adjusts TTL based on hit rates, extending TTL for frequently accessed items
+            and reducing it for rarely accessed ones.
+        </p>
+    </div>
+
+    <h3 id="rate-limiting">Rate Limiting</h3>
+    <p>
+        Rate limiting is implemented using a token bucket algorithm to prevent overloading the model.
+        The rate limiter can be configured with requests per minute and burst size parameters.
+    </p>
+    <div class="component">
+        <h4>Rate Limiting Parameters</h4>
+        <ul>
+            <li><code>requests_per_minute</code> - Maximum number of requests per minute</li>
+            <li><code>burst_size</code> - Maximum number of requests that can be made in a burst</li>
+            <li><code>token_cost_func</code> - Function to calculate token cost based on prompt length</li>
+        </ul>
+    </div>
+
+    <h3 id="quantization">Model Quantization</h3>
+    <p>
+        The Phi client supports model quantization to reduce memory usage and improve inference speed.
+        Both 4-bit and 8-bit quantization are supported using the BitsAndBytes library.
+    </p>
+    <div class="warning">
+        <p>
+            <strong>Note:</strong> Quantization reduces memory usage but may slightly impact model accuracy.
+            For production use, test both quantized and non-quantized versions to find the optimal balance.
+        </p>
+    </div>
+
+    <h2 id="usage">Usage Examples</h2>
+    <p>
+        Here's a simple example of how to use the LLM integration in your code:
+    </p>
+    <pre><code>from core.llm.llm_factory import LLMFactory
+
+# Get an LLM client
+llm_client = LLMFactory.create_client()
+
+# Generate a response
+prompt = "Extract the product category from this description: 'Sony 65-inch 4K OLED TV with HDR'"
+response = llm_client.generate_response(prompt)
+
+print(response)  # Output: "Electronics > Televisions > OLED TVs"</code></pre>
+
+    <h2 id="extending">Extending with New Models</h2>
+    <p>
+        To add support for a new LLM model, follow these steps:
+    </p>
+    <ol>
+        <li>Create a new client class that inherits from <code>BaseLLMClient</code></li>
+        <li>Implement all required methods from the base class</li>
+        <li>Add the new client to the <code>CLIENT_MAP</code> in <code>LLMFactory</code></li>
+        <li>Update the <code>_get_model_type</code> method to recognize your model</li>
+    </ol>
+    <p>
+        Example of adding a new model:
+    </p>
+    <pre><code># 1. Create a new client class
+class NewModelClient(BaseLLMClient):
+    def initialize_model(self):
+        # Implementation
+        pass
+        
+    def generate_response(self, prompt):
+        # Implementation
+        return "Response"
+        
+    def batch_generate(self, prompts):
+        # Implementation
+        return ["Response 1", "Response 2"]
+
+# 2. Add to CLIENT_MAP in LLMFactory
+CLIENT_MAP = {
+    "phi": PhiClient,
+    "new_model": NewModelClient,
+}</code></pre>
+
+    <div class="note">
+        <p>
+            <strong>Note:</strong> For more detailed information about the LLM integration, refer to the source code in the <code>core/llm</code> directory.
+        </p>
+    </div>
+
+    <script>
+        function copyToClipboard(button) {
+            const pre = button.previousElementSibling;
+            const text = pre.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

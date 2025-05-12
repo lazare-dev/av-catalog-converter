@@ -98,11 +98,36 @@
         .toc li {
             margin-bottom: 5px;
         }
+        .doc-card {
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            transition: all 0.3s ease;
+        }
+        .doc-card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.16);
+            transform: translateY(-2px);
+        }
+        .doc-card h3 {
+            margin-top: 0;
+            color: #0366d6;
+        }
+        .doc-card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        .doc-section {
+            margin-bottom: 40px;
+        }
     </style>
 </head>
 <body>
     <h1>AV Catalog Converter Documentation</h1>
-    
+
     <div class="note">
         <p><strong>Note:</strong> This is the HTML version of the AV Catalog Converter documentation. For the Markdown version, see <a href="../index.md">index.md</a>.</p>
     </div>
@@ -110,108 +135,186 @@
     <div class="toc">
         <h2>Table of Contents</h2>
         <ul>
-            <li><a href="#getting-started">Getting Started</a>
-                <ul>
-                    <li><a href="#installation">Installation</a></li>
-                    <li><a href="#usage">Usage</a></li>
-                    <li><a href="#docker-setup">Docker Setup</a></li>
-                </ul>
-            </li>
-            <li><a href="#api-reference">API Reference</a>
-                <ul>
-                    <li><a href="#api-documentation">API Documentation</a></li>
-                    <li><a href="#openapi-specification">OpenAPI Specification</a></li>
-                </ul>
-            </li>
-            <li><a href="#development">Development</a>
-                <ul>
-                    <li><a href="#project-structure">Project Structure</a></li>
-                    <li><a href="#adding-a-new-parser">Adding a New Parser</a></li>
-                    <li><a href="#running-tests">Running Tests</a></li>
-                    <li><a href="#continuous-integration-and-deployment">Continuous Integration and Deployment</a></li>
-                </ul>
-            </li>
-            <li><a href="#performance">Performance</a>
-                <ul>
-                    <li><a href="#performance-optimization-guide">Performance Optimization Guide</a></li>
-                    <li><a href="#profiling-tools">Profiling Tools</a></li>
-                    <li><a href="#memory-optimization">Memory Optimization</a></li>
-                </ul>
-            </li>
-            <li><a href="#examples">Examples</a>
-                <ul>
-                    <li><a href="#command-line-examples">Command Line Examples</a></li>
-                    <li><a href="#api-examples">API Examples</a></li>
-                    <li><a href="#integration-examples">Integration Examples</a></li>
-                </ul>
-            </li>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#core-components">Core Components</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#utilities">Utilities</a></li>
+            <li><a href="#api-reference">API Reference</a></li>
+            <li><a href="#deployment">Deployment</a></li>
+            <li><a href="#development">Development</a></li>
+            <li><a href="#testing">Testing</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
         </ul>
     </div>
 
-    <h2 id="getting-started">Getting Started</h2>
-    
-    <h3 id="installation">Installation</h3>
-    <p>For detailed installation instructions, see the <a href="../../README.md#installation">Installation section in the README</a>.</p>
-    
-    <h3 id="usage">Usage</h3>
-    <p>For detailed usage instructions, see the <a href="../../README.md#usage">Usage section in the README</a>.</p>
-    
-    <h3 id="docker-setup">Docker Setup</h3>
-    <p>For Docker setup instructions, see the <a href="../../docker/README.md">Docker README</a>.</p>
-    
+    <h2 id="overview">Overview</h2>
+    <p>
+        The AV Catalog Converter is a specialized tool designed to standardize diverse audio-visual equipment catalogs into a consistent format.
+        It uses a combination of pattern matching, heuristics, and machine learning to analyze, map, and transform catalog data from various
+        manufacturers and suppliers into a standardized output format.
+    </p>
+    <p>
+        The application is built as a modular system with a Flask-based API backend and supports both command-line and web-based interfaces.
+        It leverages the Microsoft Phi-2 model for intelligent field mapping and category extraction.
+    </p>
+
+    <h2 id="core-components">Core Components</h2>
+    <div class="doc-card-container">
+        <div class="doc-card">
+            <h3>LLM Integration</h3>
+            <p>Integration with Microsoft's Phi-2 model for intelligent data processing.</p>
+            <p><a href="llm_integration.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>File Parsers</h3>
+            <p>Components for parsing various file formats (CSV, Excel, JSON, etc.).</p>
+            <p><a href="file_parsers.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Data Processing Pipeline</h3>
+            <p>The end-to-end data processing workflow from input to standardized output.</p>
+            <p><a href="data_pipeline.html">View Documentation</a></p>
+        </div>
+    </div>
+
+    <h2 id="services">Services</h2>
+    <div class="doc-card-container">
+        <div class="doc-card">
+            <h3>Structure Analysis</h3>
+            <p>Analyzes input data structure to understand column types and relationships.</p>
+            <p><a href="structure_analysis.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Field Mapping</h3>
+            <p>Maps input fields to standardized schema using multiple strategies.</p>
+            <p><a href="field_mapping.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Category Extraction</h3>
+            <p>Extracts and normalizes product categories from catalog data.</p>
+            <p><a href="category_extraction.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Value Normalization</h3>
+            <p>Standardizes values across fields for consistency.</p>
+            <p><a href="value_normalization.html">View Documentation</a></p>
+        </div>
+    </div>
+
+    <h2 id="utilities">Utilities</h2>
+    <div class="doc-card-container">
+        <div class="doc-card">
+            <h3>Caching</h3>
+            <p>TTL-based caching mechanisms for improved performance.</p>
+            <p><a href="caching.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Rate Limiting</h3>
+            <p>Token bucket-based rate limiting for LLM API calls.</p>
+            <p><a href="rate_limiting.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Parallel Processing</h3>
+            <p>Parallel processing utilities for handling large files.</p>
+            <p><a href="parallel_processing.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Validation</h3>
+            <p>Data validation utilities for ensuring output quality.</p>
+            <p><a href="validation.html">View Documentation</a></p>
+        </div>
+    </div>
+
     <h2 id="api-reference">API Reference</h2>
-    
-    <h3 id="api-documentation">API Documentation</h3>
-    <p>For detailed API documentation, see the <a href="../api_reference.md">API Reference</a>.</p>
-    
-    <h3 id="openapi-specification">OpenAPI Specification</h3>
-    <p>The OpenAPI specification is available in <a href="../openapi.yaml">YAML format</a>.</p>
-    
+    <div class="doc-card-container">
+        <div class="doc-card">
+            <h3>API Endpoints</h3>
+            <p>Detailed documentation of all API endpoints.</p>
+            <p><a href="api_endpoints.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Request/Response Formats</h3>
+            <p>Formats for API requests and responses.</p>
+            <p><a href="api_formats.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Error Handling</h3>
+            <p>API error handling and response codes.</p>
+            <p><a href="error_handling.html">View Documentation</a></p>
+        </div>
+    </div>
+
+    <h2 id="deployment">Deployment</h2>
+    <div class="doc-card-container">
+        <div class="doc-card">
+            <h3>Docker Setup</h3>
+            <p>Instructions for deploying with Docker.</p>
+            <p><a href="docker_setup.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Configuration</h3>
+            <p>Configuration options and environment variables.</p>
+            <p><a href="configuration.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Performance Tuning</h3>
+            <p>Guidelines for optimizing performance in production.</p>
+            <p><a href="performance_tuning.html">View Documentation</a></p>
+        </div>
+    </div>
+
     <h2 id="development">Development</h2>
-    
-    <h3 id="project-structure">Project Structure</h3>
-    <p>For information about the project structure, see the <a href="../../README.md#project-structure">Project Structure section in the README</a>.</p>
-    
-    <h3 id="adding-a-new-parser">Adding a New Parser</h3>
-    <p>For instructions on adding a new parser, see the <a href="../../README.md#adding-a-new-parser">Adding a New Parser section in the README</a>.</p>
-    
-    <h3 id="running-tests">Running Tests</h3>
-    <p>For instructions on running tests, see the <a href="../../README.md#running-tests">Running Tests section in the README</a>.</p>
-    
-    <h3 id="continuous-integration-and-deployment">Continuous Integration and Deployment</h3>
-    <p>For information about CI/CD, see the <a href="../../README.md#continuous-integration-and-deployment">CI/CD section in the README</a>.</p>
-    
-    <h2 id="performance">Performance</h2>
-    
-    <h3 id="performance-optimization-guide">Performance Optimization Guide</h3>
-    <p>For performance optimization guidance, see the <a href="../performance_optimization.md">Performance Optimization Guide</a>.</p>
-    
-    <h3 id="profiling-tools">Profiling Tools</h3>
-    <p>For information about profiling tools, see the <a href="../performance_optimization.md#profiling-tools">Profiling Tools section in the Performance Optimization Guide</a>.</p>
-    
-    <h3 id="memory-optimization">Memory Optimization</h3>
-    <p>For memory optimization guidance, see the <a href="../performance_optimization.md#memory-optimization">Memory Optimization section in the Performance Optimization Guide</a>.</p>
-    
-    <h2 id="examples">Examples</h2>
-    
-    <h3 id="command-line-examples">Command Line Examples</h3>
-    <p>For command line examples, see the <a href="../index.md#command-line-examples">Command Line Examples section in the Documentation Index</a>.</p>
-    
-    <h3 id="api-examples">API Examples</h3>
-    <p>For API examples, see the <a href="../index.md#api-examples">API Examples section in the Documentation Index</a>.</p>
-    
-    <h3 id="integration-examples">Integration Examples</h3>
-    <p>For integration examples, see the <a href="../index.md#integration-examples">Integration Examples section in the Documentation Index</a>.</p>
-    
-    <div class="note">
-        <p><strong>Note:</strong> Architectural diagrams and workflow images are planned but not yet available. These will include Architecture Overview Diagram, Data Flow Diagram, Frontend Overview Diagram, and Component Interaction Diagrams.</p>
+    <div class="doc-card-container">
+        <div class="doc-card">
+            <h3>Development Guide</h3>
+            <p>Guide for developers working on the project.</p>
+            <p><a href="development.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Project Structure</h3>
+            <p>Overview of the project's directory structure.</p>
+            <p><a href="project_structure.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Adding New Features</h3>
+            <p>Guidelines for extending the application.</p>
+            <p><a href="adding_features.html">View Documentation</a></p>
+        </div>
+    </div>
+
+    <h2 id="testing">Testing</h2>
+    <div class="doc-card-container">
+        <div class="doc-card">
+            <h3>Testing Guide</h3>
+            <p>Comprehensive guide to testing the application.</p>
+            <p><a href="testing.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>Test Coverage</h3>
+            <p>Information about test coverage and metrics.</p>
+            <p><a href="test_coverage.html">View Documentation</a></p>
+        </div>
+    </div>
+
+    <h2 id="troubleshooting">Troubleshooting</h2>
+    <div class="doc-card-container">
+        <div class="doc-card">
+            <h3>Common Issues</h3>
+            <p>Solutions to common problems encountered.</p>
+            <p><a href="troubleshooting.html">View Documentation</a></p>
+        </div>
+        <div class="doc-card">
+            <h3>FAQ</h3>
+            <p>Frequently asked questions about the application.</p>
+            <p><a href="faq.html">View Documentation</a></p>
+        </div>
     </div>
 
     <script>
         function copyToClipboard(button) {
             const pre = button.previousElementSibling;
             const text = pre.textContent;
-            
+
             navigator.clipboard.writeText(text).then(() => {
                 const originalText = button.textContent;
                 button.textContent = 'Copied!';

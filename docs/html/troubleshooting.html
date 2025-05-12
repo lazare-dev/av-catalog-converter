@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - AV Catalog Converter Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            margin-top: 25px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow: auto;
+            position: relative;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background-color: #2980b9;
+        }
+        .command-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        .endpoint {
+            background-color: #f0f7fb;
+            border-left: 5px solid #3498db;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .project-structure {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            line-height: 1.3;
+        }
+        .component {
+            background-color: #f9f9f9;
+            border-left: 3px solid #2ecc71;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .note {
+            background-color: #fff8dc;
+            border-left: 5px solid #f1c40f;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .warning {
+            background-color: #ffebee;
+            border-left: 5px solid #f44336;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #eaecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        .toc li {
+            margin-bottom: 5px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .issue {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        .issue-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .issue-description {
+            margin-bottom: 10px;
+        }
+        .issue-solution {
+            background-color: #f0f7fb;
+            border-left: 5px solid #3498db;
+            padding: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="index.html">Home</a> &gt; Troubleshooting
+    </div>
+
+    <h1>Troubleshooting</h1>
+    
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#common-issues">Common Issues</a>
+                <ul>
+                    <li><a href="#installation-issues">Installation Issues</a></li>
+                    <li><a href="#file-parsing-issues">File Parsing Issues</a></li>
+                    <li><a href="#llm-issues">LLM Integration Issues</a></li>
+                    <li><a href="#mapping-issues">Field Mapping Issues</a></li>
+                    <li><a href="#api-issues">API Issues</a></li>
+                    <li><a href="#docker-issues">Docker Issues</a></li>
+                </ul>
+            </li>
+            <li><a href="#error-messages">Common Error Messages</a></li>
+            <li><a href="#debugging">Debugging Techniques</a>
+                <ul>
+                    <li><a href="#logging">Logging</a></li>
+                    <li><a href="#debugging-tools">Debugging Tools</a></li>
+                </ul>
+            </li>
+            <li><a href="#performance-issues">Performance Issues</a></li>
+            <li><a href="#getting-help">Getting Help</a></li>
+        </ul>
+    </div>
+
+    <h2 id="common-issues">Common Issues</h2>
+    
+    <h3 id="installation-issues">Installation Issues</h3>
+    
+    <div class="issue">
+        <div class="issue-title">Missing Dependencies</div>
+        <div class="issue-description">
+            <p>Error when installing requirements: <code>ERROR: Could not build wheels for [package] which use PEP 517</code></p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> Install the required system dependencies:</p>
+            <pre><code>sudo apt-get update
+sudo apt-get install -y build-essential libffi-dev</code></pre>
+            <p>Then try installing the requirements again:</p>
+            <pre><code>pip install -r requirements.txt</code></pre>
+        </div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-title">Incompatible Python Version</div>
+        <div class="issue-description">
+            <p>Error: <code>SyntaxError: invalid syntax</code> or <code>ImportError: cannot import name</code></p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> The application requires Python 3.10 or later. Check your Python version:</p>
+            <pre><code>python --version</code></pre>
+            <p>If you're using an older version, install Python 3.10 or later and create a new virtual environment:</p>
+            <pre><code>python3.10 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt</code></pre>
+        </div>
+    </div>
+
+    <h3 id="file-parsing-issues">File Parsing Issues</h3>
+    
+    <div class="issue">
+        <div class="issue-title">Unsupported File Format</div>
+        <div class="issue-description">
+            <p>Error: <code>UnsupportedFileFormatError: File format not supported: [extension]</code></p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> The application supports CSV, Excel, JSON, and XML formats. Convert your file to one of these formats or add a custom parser for your format.</p>
+            <p>To add a custom parser, see the <a href="file_parsers.html#extending">Adding New Parsers</a> section.</p>
+        </div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-title">Encoding Issues</div>
+        <div class="issue-description">
+            <p>Error: <code>UnicodeDecodeError: 'utf-8' codec can't decode byte 0x... in position ...: invalid continuation byte</code></p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> The file has an encoding that is not UTF-8. Try specifying the encoding manually:</p>
+            <pre><code>from core.file_parser.parser_factory import ParserFactory
+
+parser = ParserFactory.create_parser("file.csv")
+parser.encoding = "latin-1"  # or "cp1252", "iso-8859-1", etc.
+data = parser.parse()</code></pre>
+            <p>You can also try to detect the encoding automatically using the <code>chardet</code> library:</p>
+            <pre><code>import chardet
+
+with open("file.csv", "rb") as f:
+    result = chardet.detect(f.read())
+    encoding = result["encoding"]
+    print(f"Detected encoding: {encoding}")</code></pre>
+        </div>
+    </div>
+
+    <h3 id="llm-issues">LLM Integration Issues</h3>
+    
+    <div class="issue">
+        <div class="issue-title">Out of Memory Error</div>
+        <div class="issue-description">
+            <p>Error: <code>RuntimeError: CUDA out of memory</code> or <code>MemoryError</code></p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> The LLM requires significant memory. Try the following:</p>
+            <ol>
+                <li>Enable model quantization to reduce memory usage:
+                    <pre><code># In config/settings.py
+MODEL_CONFIG = {
+    "model_id": "microsoft/phi-2",
+    "quantization": "4bit",  # Use 4-bit quantization
+    # Other settings...
+}</code></pre>
+                </li>
+                <li>Increase available memory in Docker:
+                    <pre><code># In docker-compose.yml
+services:
+  app:
+    # Other settings...
+    deploy:
+      resources:
+        limits:
+          memory: 8G  # Increase memory limit</code></pre>
+                </li>
+                <li>Process data in smaller chunks:
+                    <pre><code># Set chunk_size when parsing large files
+parser = ParserFactory.create_parser("large_file.csv")
+data = parser.parse(chunk_size=1000)</code></pre>
+                </li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-title">LLM Initialization Failure</div>
+        <div class="issue-description">
+            <p>Error: <code>LLMInitializationError: Failed to initialize LLM: [error message]</code></p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> Check the following:</p>
+            <ol>
+                <li>Ensure you have sufficient disk space for model files</li>
+                <li>Check internet connectivity for model downloading</li>
+                <li>Verify that the model ID is correct in <code>config/settings.py</code></li>
+                <li>Try a different quantization setting</li>
+            </ol>
+            <p>You can also try clearing the model cache and redownloading:</p>
+            <pre><code>from transformers import AutoTokenizer, AutoModelForCausalLM
+
+# Clear cache
+AutoTokenizer.from_pretrained("microsoft/phi-2", force_download=True)
+AutoModelForCausalLM.from_pretrained("microsoft/phi-2", force_download=True)</code></pre>
+        </div>
+    </div>
+
+    <h3 id="mapping-issues">Field Mapping Issues</h3>
+    
+    <div class="issue">
+        <div class="issue-title">Incorrect Field Mappings</div>
+        <div class="issue-description">
+            <p>Issue: The field mapper is not correctly mapping input columns to the standardized schema.</p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> Provide explicit mappings using the <code>user_mappings</code> property:</p>
+            <pre><code>from services.mapping.field_mapper import FieldMapper
+
+field_mapper = FieldMapper()
+field_mapper.user_mappings = {
+    "Product Code": "SKU",
+    "Product Name": "Short Description",
+    "Detailed Description": "Long Description",
+    "Brand": "Manufacturer"
+}
+mapped_data = field_mapper.map(data, structure_info)</code></pre>
+            <p>You can also improve the semantic mapping by providing more sample data to the LLM:</p>
+            <pre><code># In config/settings.py
+SEMANTIC_MAPPING_CONFIG = {
+    "sample_rows": 10,  # Increase sample rows for better context
+    "confidence_threshold": 0.7  # Adjust confidence threshold
+}</code></pre>
+        </div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-title">Missing Required Fields</div>
+        <div class="issue-description">
+            <p>Error: <code>MissingRequiredFieldError: Required field [field] is missing in the mapped data</code></p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> Ensure that all required fields are mapped. The required fields are:</p>
+            <ul>
+                <li>SKU</li>
+                <li>Short Description</li>
+                <li>Manufacturer</li>
+                <li>Trade Price</li>
+            </ul>
+            <p>If your input data doesn't have these fields, you can add default values:</p>
+            <pre><code>from services.mapping.field_mapper import FieldMapper
+
+field_mapper = FieldMapper()
+mapped_data = field_mapper.map(data, structure_info)
+
+# Add missing required fields with default values
+if "SKU" not in mapped_data.columns:
+    mapped_data["SKU"] = mapped_data.index.astype(str)
+if "Short Description" not in mapped_data.columns:
+    mapped_data["Short Description"] = "No description available"
+if "Manufacturer" not in mapped_data.columns:
+    mapped_data["Manufacturer"] = "Unknown"
+if "Trade Price" not in mapped_data.columns:
+    mapped_data["Trade Price"] = 0.0</code></pre>
+        </div>
+    </div>
+
+    <h3 id="api-issues">API Issues</h3>
+    
+    <div class="issue">
+        <div class="issue-title">API Timeout</div>
+        <div class="issue-description">
+            <p>Error: <code>504 Gateway Timeout</code> or client-side timeout</p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> Processing large files can take time. Increase the timeout settings:</p>
+            <ol>
+                <li>Increase Gunicorn worker timeout:
+                    <pre><code># In docker/entrypoint.sh
+exec gunicorn app:app --bind 0.0.0.0:8080 --workers 4 --timeout 300 --access-logfile - --error-logfile -</code></pre>
+                </li>
+                <li>Increase client-side timeout:
+                    <pre><code># Python requests example
+import requests
+response = requests.post("http://localhost:8080/api/upload", 
+                         files={"file": open("large_file.csv", "rb")},
+                         timeout=300)</code></pre>
+                </li>
+                <li>For very large files, consider processing in batches or using the command-line interface instead of the API</li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-title">File Size Limit Exceeded</div>
+        <div class="issue-description">
+            <p>Error: <code>413 Request Entity Too Large</code></p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> Increase the maximum file size limit:</p>
+            <pre><code># In app.py
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB</code></pre>
+            <p>If using Nginx as a reverse proxy, also update the Nginx configuration:</p>
+            <pre><code># In nginx.conf
+http {
+    client_max_body_size 100M;
+    # Other settings...
+}</code></pre>
+            <p>For very large files, consider splitting the file or using a different approach like batch processing.</p>
+        </div>
+    </div>
+
+    <h3 id="docker-issues">Docker Issues</h3>
+    
+    <div class="issue">
+        <div class="issue-title">Container Fails to Start</div>
+        <div class="issue-description">
+            <p>Error: Container exits immediately after starting</p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> Check the container logs:</p>
+            <pre><code>docker logs av-catalog-converter</code></pre>
+            <p>Common causes and solutions:</p>
+            <ol>
+                <li>Tests failing on startup:
+                    <pre><code># Disable tests on startup
+docker run -e TEST_ON_STARTUP=false -p 8080:8080 av-catalog-converter</code></pre>
+                </li>
+                <li>Permission issues with mounted volumes:
+                    <pre><code># Fix permissions on host
+chmod -R 777 ./data ./logs</code></pre>
+                </li>
+                <li>Insufficient memory:
+                    <pre><code># Increase memory limit
+docker run --memory=4g -p 8080:8080 av-catalog-converter</code></pre>
+                </li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-title">Slow Container Performance</div>
+        <div class="issue-description">
+            <p>Issue: Docker container is running slowly, especially during LLM operations</p>
+        </div>
+        <div class="issue-solution">
+            <p><strong>Solution:</strong> Optimize Docker resource allocation:</p>
+            <ol>
+                <li>Increase CPU allocation:
+                    <pre><code># In docker-compose.yml
+services:
+  app:
+    # Other settings...
+    deploy:
+      resources:
+        limits:
+          cpus: '4'  # Increase CPU limit</code></pre>
+                </li>
+                <li>Enable model quantization to reduce memory usage:
+                    <pre><code># In docker-compose.yml
+services:
+  app:
+    # Other settings...
+    environment:
+      - MODEL_QUANTIZATION=8bit</code></pre>
+                </li>
+                <li>Use volume mounts for model cache to avoid redownloading:
+                    <pre><code># In docker-compose.yml
+services:
+  app:
+    # Other settings...
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./model_cache:/root/.cache/huggingface</code></pre>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <h2 id="error-messages">Common Error Messages</h2>
+    <p>
+        Here are some common error messages and their explanations:
+    </p>
+    <table>
+        <tr>
+            <th>Error Message</th>
+            <th>Explanation</th>
+            <th>Solution</th>
+        </tr>
+        <tr>
+            <td><code>UnsupportedFileFormatError</code></td>
+            <td>The file format is not supported</td>
+            <td>Convert to a supported format (CSV, Excel, JSON, XML) or add a custom parser</td>
+        </tr>
+        <tr>
+            <td><code>UnicodeDecodeError</code></td>
+            <td>File encoding issue</td>
+            <td>Specify the correct encoding or use a tool like <code>chardet</code> to detect it</td>
+        </tr>
+        <tr>
+            <td><code>LLMInitializationError</code></td>
+            <td>Failed to initialize the LLM</td>
+            <td>Check memory, disk space, and internet connectivity</td>
+        </tr>
+        <tr>
+            <td><code>MissingRequiredFieldError</code></td>
+            <td>A required field is missing in the mapped data</td>
+            <td>Provide explicit mappings or add default values for required fields</td>
+        </tr>
+        <tr>
+            <td><code>MemoryError</code></td>
+            <td>Not enough memory for the operation</td>
+            <td>Use model quantization, increase memory allocation, or process in smaller chunks</td>
+        </tr>
+        <tr>
+            <td><code>RateLimitExceededError</code></td>
+            <td>LLM rate limit exceeded</td>
+            <td>Adjust rate limiting settings or add delays between requests</td>
+        </tr>
+        <tr>
+            <td><code>FileNotFoundError</code></td>
+            <td>The specified file does not exist</td>
+            <td>Check the file path and ensure the file exists</td>
+        </tr>
+        <tr>
+            <td><code>PermissionError</code></td>
+            <td>Permission denied when accessing a file</td>
+            <td>Check file permissions and ownership</td>
+        </tr>
+    </table>
+
+    <h2 id="debugging">Debugging Techniques</h2>
+    
+    <h3 id="logging">Logging</h3>
+    <p>
+        The application uses Python's logging module to log information, warnings, and errors.
+        You can adjust the log level to get more detailed information:
+    </p>
+    <pre><code># In config/settings.py
+LOG_LEVEL = "DEBUG"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL</code></pre>
+    <p>
+        Log files are stored in the <code>logs</code> directory. The main log file is <code>app.log</code>.
+    </p>
+    <p>
+        To view logs in real-time:
+    </p>
+    <div class="command-container">
+        <pre><code>tail -f logs/app.log</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h3 id="debugging-tools">Debugging Tools</h3>
+    <p>
+        For more advanced debugging, you can use the following tools:
+    </p>
+    <ul>
+        <li><strong>pdb</strong> - Python's built-in debugger:
+            <pre><code>import pdb; pdb.set_trace()</code></pre>
+        </li>
+        <li><strong>ipdb</strong> - Enhanced interactive debugger:
+            <pre><code>pip install ipdb
+import ipdb; ipdb.set_trace()</code></pre>
+        </li>
+        <li><strong>pytest</strong> - For debugging tests:
+            <pre><code>python -m pytest tests/unit/core/llm/test_phi_client.py -v --pdb</code></pre>
+        </li>
+    </ul>
+    <p>
+        For Docker containers, you can access the container shell:
+    </p>
+    <div class="command-container">
+        <pre><code>docker exec -it av-catalog-converter /bin/bash</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h2 id="performance-issues">Performance Issues</h2>
+    <p>
+        If you're experiencing performance issues, consider the following optimizations:
+    </p>
+    <ul>
+        <li><strong>Model Quantization</strong> - Reduce memory usage and improve inference speed:
+            <pre><code># In config/settings.py
+MODEL_CONFIG = {
+    "model_id": "microsoft/phi-2",
+    "quantization": "8bit",  # Options: "4bit", "8bit", null
+    # Other settings...
+}</code></pre>
+        </li>
+        <li><strong>Caching</strong> - Enable caching to avoid redundant LLM calls:
+            <pre><code># In config/settings.py
+MODEL_CONFIG = {
+    # Other settings...
+    "cache_enabled": true,
+    "cache_ttl": 3600,  # Cache TTL in seconds
+}</code></pre>
+        </li>
+        <li><strong>Parallel Processing</strong> - Process large files in parallel:
+            <pre><code># In config/settings.py
+PROCESSING_CONFIG = {
+    "parallel_processing": true,
+    "max_workers": 4,  # Number of worker processes
+    "chunk_size": 1000,  # Rows per chunk
+}</code></pre>
+        </li>
+        <li><strong>Resource Allocation</strong> - Increase Docker resource limits:
+            <pre><code># In docker-compose.yml
+services:
+  app:
+    # Other settings...
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G</code></pre>
+        </li>
+    </ul>
+
+    <h2 id="getting-help">Getting Help</h2>
+    <p>
+        If you're still experiencing issues after trying the solutions in this guide, you can:
+    </p>
+    <ul>
+        <li>Check the <a href="faq.html">FAQ</a> for answers to common questions</li>
+        <li>Review the <a href="https://github.com/yourusername/av-catalog-converter/issues">GitHub Issues</a> to see if others have encountered the same problem</li>
+        <li>Create a new issue on GitHub with detailed information about your problem, including:
+            <ul>
+                <li>Error messages and stack traces</li>
+                <li>Steps to reproduce the issue</li>
+                <li>Environment information (OS, Python version, Docker version)</li>
+                <li>Configuration settings</li>
+                <li>Sample data (if possible)</li>
+            </ul>
+        </li>
+    </ul>
+
+    <div class="note">
+        <p>
+            <strong>Note:</strong> When reporting issues, please do not include sensitive data or credentials.
+            Redact or anonymize any sensitive information before sharing.
+        </p>
+    </div>
+
+    <script>
+        function copyToClipboard(button) {
+            const pre = button.previousElementSibling;
+            const text = pre.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

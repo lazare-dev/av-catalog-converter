@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Guide - AV Catalog Converter Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            margin-top: 25px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow: auto;
+            position: relative;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background-color: #2980b9;
+        }
+        .command-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        .endpoint {
+            background-color: #f0f7fb;
+            border-left: 5px solid #3498db;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .project-structure {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            line-height: 1.3;
+        }
+        .component {
+            background-color: #f9f9f9;
+            border-left: 3px solid #2ecc71;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .note {
+            background-color: #fff8dc;
+            border-left: 5px solid #f1c40f;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .warning {
+            background-color: #ffebee;
+            border-left: 5px solid #f44336;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #eaecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        .toc li {
+            margin-bottom: 5px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="index.html">Home</a> &gt; Testing Guide
+    </div>
+
+    <h1>Testing Guide</h1>
+    
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#test-structure">Test Structure</a>
+                <ul>
+                    <li><a href="#unit-tests">Unit Tests</a></li>
+                    <li><a href="#integration-tests">Integration Tests</a></li>
+                    <li><a href="#end-to-end-tests">End-to-End Tests</a></li>
+                    <li><a href="#performance-tests">Performance Tests</a></li>
+                </ul>
+            </li>
+            <li><a href="#running-tests">Running Tests</a>
+                <ul>
+                    <li><a href="#running-all-tests">Running All Tests</a></li>
+                    <li><a href="#running-specific-tests">Running Specific Tests</a></li>
+                    <li><a href="#running-tests-with-coverage">Running Tests with Coverage</a></li>
+                </ul>
+            </li>
+            <li><a href="#test-fixtures">Test Fixtures</a></li>
+            <li><a href="#mocking">Mocking</a>
+                <ul>
+                    <li><a href="#mocking-llm">Mocking LLM Responses</a></li>
+                    <li><a href="#mocking-file-io">Mocking File I/O</a></li>
+                </ul>
+            </li>
+            <li><a href="#writing-tests">Writing Tests</a>
+                <ul>
+                    <li><a href="#test-naming">Test Naming Conventions</a></li>
+                    <li><a href="#test-organization">Test Organization</a></li>
+                    <li><a href="#test-best-practices">Test Best Practices</a></li>
+                </ul>
+            </li>
+            <li><a href="#continuous-integration">Continuous Integration</a></li>
+        </ul>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <p>
+        The AV Catalog Converter includes a comprehensive test suite to ensure code quality and functionality.
+        The tests are organized into different categories based on their scope and purpose.
+    </p>
+    <p>
+        The testing framework uses:
+    </p>
+    <ul>
+        <li><strong>pytest</strong> - Main testing framework</li>
+        <li><strong>pytest-cov</strong> - Coverage reporting</li>
+        <li><strong>pytest-mock</strong> - Mocking functionality</li>
+        <li><strong>pytest-xdist</strong> - Parallel test execution</li>
+    </ul>
+    <p>
+        Tests are automatically run on container startup to ensure the application is functioning correctly.
+        This behavior can be disabled by setting the <code>TEST_ON_STARTUP</code> environment variable to <code>false</code>.
+    </p>
+
+    <h2 id="test-structure">Test Structure</h2>
+    <p>
+        Tests are organized in the <code>tests</code> directory with the following structure:
+    </p>
+    <div class="project-structure">
+tests/
+├── unit/                  # Unit tests
+│   ├── core/              # Tests for core components
+│   │   ├── llm/           # Tests for LLM integration
+│   │   ├── file_parser/   # Tests for file parsers
+│   │   └── ...
+│   ├── services/          # Tests for services
+│   │   ├── structure/     # Tests for structure analysis
+│   │   ├── mapping/       # Tests for field mapping
+│   │   └── ...
+│   └── utils/             # Tests for utilities
+├── integration/           # Integration tests
+│   ├── api/               # Tests for API endpoints
+│   ├── pipeline/          # Tests for data pipeline
+│   └── ...
+├── e2e/                   # End-to-end tests
+├── performance/           # Performance tests
+└── conftest.py            # Common test fixtures and configuration
+    </div>
+    
+    <h3 id="unit-tests">Unit Tests</h3>
+    <p>
+        Unit tests focus on testing individual components in isolation. They use mocks to replace dependencies
+        and focus on the behavior of a single unit of code.
+    </p>
+    <div class="component">
+        <h4>Key Characteristics</h4>
+        <ul>
+            <li>Fast execution</li>
+            <li>Isolated from external dependencies</li>
+            <li>Test a single function or class</li>
+            <li>Use mocks for dependencies</li>
+        </ul>
+    </div>
+    <p>
+        Example unit test:
+    </p>
+    <pre><code>def test_phi_client_initialization():
+    """Test that the PhiClient initializes correctly."""
+    client = PhiClient()
+    client.initialize_model()
+    
+    assert client.model is not None
+    assert client.tokenizer is not None
+    assert client.model_id == "microsoft/phi-2"</code></pre>
+
+    <h3 id="integration-tests">Integration Tests</h3>
+    <p>
+        Integration tests focus on testing the interaction between multiple components. They verify that
+        components work together correctly.
+    </p>
+    <div class="component">
+        <h4>Key Characteristics</h4>
+        <ul>
+            <li>Test interaction between components</li>
+            <li>May use real dependencies</li>
+            <li>Slower than unit tests</li>
+            <li>Focus on component interfaces</li>
+        </ul>
+    </div>
+    <p>
+        Example integration test:
+    </p>
+    <pre><code>def test_field_mapping_with_structure_analysis():
+    """Test that field mapping works correctly with structure analysis."""
+    # Load test data
+    data = pd.read_csv("tests/data/sample_catalog.csv")
+    
+    # Analyze structure
+    analyzer = StructureAnalyzer()
+    structure_info = analyzer.analyze(data)
+    
+    # Map fields
+    field_mapper = FieldMapper()
+    mapped_data = field_mapper.map(data, structure_info)
+    
+    # Verify mapping results
+    assert "SKU" in mapped_data.columns
+    assert "Short Description" in mapped_data.columns
+    assert "Manufacturer" in mapped_data.columns</code></pre>
+
+    <h3 id="end-to-end-tests">End-to-End Tests</h3>
+    <p>
+        End-to-end tests verify the entire application workflow from input to output. They test the application
+        as a whole, including API endpoints and data processing.
+    </p>
+    <div class="component">
+        <h4>Key Characteristics</h4>
+        <ul>
+            <li>Test complete workflows</li>
+            <li>Use real dependencies</li>
+            <li>Slowest test type</li>
+            <li>Focus on user scenarios</li>
+        </ul>
+    </div>
+    <p>
+        Example end-to-end test:
+    </p>
+    <pre><code>def test_csv_to_standardized_csv_conversion():
+    """Test converting a CSV file to standardized CSV format."""
+    # Create test client
+    client = app.test_client()
+    
+    # Prepare test file
+    with open("tests/data/sample_catalog.csv", "rb") as f:
+        data = {"file": (f, "sample_catalog.csv"), "format": "csv"}
+        
+        # Send request
+        response = client.post("/api/upload", data=data, content_type="multipart/form-data")
+        
+        # Verify response
+        assert response.status_code == 200
+        assert response.headers["Content-Type"] == "text/csv"
+        
+        # Verify content
+        content = response.data.decode("utf-8")
+        assert "SKU,Short Description,Long Description" in content
+        assert "Manufacturer,Manufacturer SKU,Image URL" in content</code></pre>
+
+    <h3 id="performance-tests">Performance Tests</h3>
+    <p>
+        Performance tests measure the performance characteristics of the application, such as response time,
+        throughput, and resource usage.
+    </p>
+    <div class="component">
+        <h4>Key Characteristics</h4>
+        <ul>
+            <li>Measure performance metrics</li>
+            <li>Test with varying load</li>
+            <li>Focus on bottlenecks</li>
+            <li>May run for extended periods</li>
+        </ul>
+    </div>
+    <p>
+        Example performance test:
+    </p>
+    <pre><code>def test_large_file_processing_performance():
+    """Test processing performance with a large file."""
+    # Generate large test file
+    generate_large_test_file("tests/data/large_catalog.csv", rows=10000)
+    
+    # Measure processing time
+    start_time = time.time()
+    process_file("tests/data/large_catalog.csv", "tests/data/output.csv")
+    end_time = time.time()
+    
+    # Verify performance
+    processing_time = end_time - start_time
+    assert processing_time < 60  # Should process in less than 60 seconds</code></pre>
+
+    <h2 id="running-tests">Running Tests</h2>
+    
+    <h3 id="running-all-tests">Running All Tests</h3>
+    <p>
+        To run all tests, use the following command:
+    </p>
+    <div class="command-container">
+        <pre><code>python -m pytest</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>
+        This will run all tests in the <code>tests</code> directory.
+    </p>
+
+    <h3 id="running-specific-tests">Running Specific Tests</h3>
+    <p>
+        To run specific tests, specify the test file or directory:
+    </p>
+    <div class="command-container">
+        <pre><code>python -m pytest tests/unit/core/llm/</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>
+        To run a specific test function:
+    </p>
+    <div class="command-container">
+        <pre><code>python -m pytest tests/unit/core/llm/test_phi_client.py::test_phi_client_initialization</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>
+        To run tests matching a pattern:
+    </p>
+    <div class="command-container">
+        <pre><code>python -m pytest -k "phi_client"</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h3 id="running-tests-with-coverage">Running Tests with Coverage</h3>
+    <p>
+        To run tests with coverage reporting:
+    </p>
+    <div class="command-container">
+        <pre><code>python -m pytest --cov=. --cov-report=term --cov-report=html</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>
+        This will generate a coverage report in the terminal and an HTML report in the <code>htmlcov</code> directory.
+    </p>
+
+    <h2 id="test-fixtures">Test Fixtures</h2>
+    <p>
+        Test fixtures are defined in <code>conftest.py</code> files and provide reusable test data and setup/teardown
+        functionality.
+    </p>
+    <p>
+        Example fixtures:
+    </p>
+    <pre><code>@pytest.fixture
+def sample_data():
+    """Fixture providing sample data for tests."""
+    return pd.DataFrame({
+        "Product Code": ["ABC123", "DEF456", "GHI789"],
+        "Product Name": ["Sony TV", "Samsung Soundbar", "LG Refrigerator"],
+        "Description": ["4K OLED TV", "Dolby Atmos Soundbar", "Smart Refrigerator"],
+        "Brand": ["Sony", "Samsung", "LG"],
+        "Price": ["1299.99", "499.99", "899.99"]
+    })
+
+@pytest.fixture
+def mock_llm_client(mocker):
+    """Fixture providing a mocked LLM client."""
+    mock_client = mocker.MagicMock()
+    mock_client.generate_response.return_value = "Mocked LLM response"
+    return mock_client</code></pre>
+
+    <h2 id="mocking">Mocking</h2>
+    
+    <h3 id="mocking-llm">Mocking LLM Responses</h3>
+    <p>
+        The LLM integration is mocked in tests to avoid making actual API calls and to provide consistent
+        responses for testing.
+    </p>
+    <p>
+        Example of mocking LLM responses:
+    </p>
+    <pre><code>def test_semantic_mapping_with_mocked_llm(mock_llm_client, sample_data):
+    """Test semantic mapping with a mocked LLM client."""
+    # Configure mock response
+    mock_llm_client.generate_response.return_value = """
+    {
+        "mappings": [
+            {"source": "Product Code", "target": "SKU", "confidence": 0.9},
+            {"source": "Product Name", "target": "Short Description", "confidence": 0.85},
+            {"source": "Description", "target": "Long Description", "confidence": 0.8},
+            {"source": "Brand", "target": "Manufacturer", "confidence": 0.95},
+            {"source": "Price", "target": "Trade Price", "confidence": 0.7}
+        ]
+    }
+    """
+    
+    # Patch LLMFactory to return the mock client
+    with patch("services.mapping.semantic_mapper.LLMFactory.create_client", return_value=mock_llm_client):
+        # Create semantic mapper
+        mapper = SemanticMapper()
+        
+        # Map fields
+        mappings = mapper.map_fields(sample_data, {})
+        
+        # Verify mappings
+        assert mappings["Product Code"] == "SKU"
+        assert mappings["Product Name"] == "Short Description"
+        assert mappings["Description"] == "Long Description"
+        assert mappings["Brand"] == "Manufacturer"
+        assert mappings["Price"] == "Trade Price"</code></pre>
+
+    <h3 id="mocking-file-io">Mocking File I/O</h3>
+    <p>
+        File I/O operations are mocked in tests to avoid creating actual files and to provide consistent
+        test data.
+    </p>
+    <p>
+        Example of mocking file I/O:
+    </p>
+    <pre><code>def test_csv_parser_with_mocked_file(mocker):
+    """Test CSV parser with a mocked file."""
+    # Mock open function
+    mock_open = mocker.patch("builtins.open", mocker.mock_open(read_data="col1,col2,col3\nval1,val2,val3"))
+    
+    # Mock pandas read_csv
+    mock_read_csv = mocker.patch("pandas.read_csv")
+    mock_df = pd.DataFrame({
+        "col1": ["val1"],
+        "col2": ["val2"],
+        "col3": ["val3"]
+    })
+    mock_read_csv.return_value = mock_df
+    
+    # Create parser
+    parser = CSVParser("dummy.csv")
+    
+    # Parse file
+    result = parser.parse()
+    
+    # Verify result
+    assert result.equals(mock_df)
+    mock_open.assert_called_once_with("dummy.csv", "r", encoding=mocker.ANY)
+    mock_read_csv.assert_called_once()</code></pre>
+
+    <h2 id="writing-tests">Writing Tests</h2>
+    
+    <h3 id="test-naming">Test Naming Conventions</h3>
+    <p>
+        Test files and functions follow these naming conventions:
+    </p>
+    <ul>
+        <li>Test files: <code>test_*.py</code></li>
+        <li>Test functions: <code>test_*</code></li>
+        <li>Test classes: <code>Test*</code></li>
+    </ul>
+    <p>
+        Test names should be descriptive and indicate what is being tested:
+    </p>
+    <pre><code>def test_phi_client_initialization():
+    """Test that the PhiClient initializes correctly."""
+    # ...
+
+def test_field_mapper_handles_missing_columns():
+    """Test that the FieldMapper handles missing columns gracefully."""
+    # ...
+
+def test_api_upload_endpoint_returns_correct_content_type():
+    """Test that the upload endpoint returns the correct content type."""
+    # ...</code></pre>
+
+    <h3 id="test-organization">Test Organization</h3>
+    <p>
+        Tests are organized following these principles:
+    </p>
+    <ul>
+        <li>Group related tests in the same file</li>
+        <li>Mirror the project structure in the test directory</li>
+        <li>Use test classes to group related test methods</li>
+        <li>Use fixtures for common setup and teardown</li>
+    </ul>
+    <p>
+        Example test class:
+    </p>
+    <pre><code>class TestFieldMapper:
+    """Tests for the FieldMapper class."""
+    
+    def test_direct_mapping(self, sample_data):
+        """Test direct field mapping."""
+        # ...
+    
+    def test_pattern_mapping(self, sample_data):
+        """Test pattern-based field mapping."""
+        # ...
+    
+    def test_semantic_mapping(self, sample_data, mock_llm_client):
+        """Test semantic field mapping."""
+        # ...
+    
+    def test_handles_missing_columns(self, sample_data):
+        """Test handling of missing columns."""
+        # ...</code></pre>
+
+    <h3 id="test-best-practices">Test Best Practices</h3>
+    <p>
+        Follow these best practices when writing tests:
+    </p>
+    <ul>
+        <li>Write focused tests that test one thing</li>
+        <li>Use descriptive test names and docstrings</li>
+        <li>Use fixtures for common setup</li>
+        <li>Mock external dependencies</li>
+        <li>Use assertions to verify results</li>
+        <li>Keep tests fast and independent</li>
+        <li>Test edge cases and error conditions</li>
+    </ul>
+    <p>
+        Example of a well-structured test:
+    </p>
+    <pre><code>def test_field_mapper_handles_empty_dataframe(mocker):
+    """Test that the FieldMapper handles empty DataFrames gracefully."""
+    # Arrange
+    empty_df = pd.DataFrame()
+    structure_info = {"column_types": {}}
+    field_mapper = FieldMapper()
+    
+    # Act
+    result = field_mapper.map(empty_df, structure_info)
+    
+    # Assert
+    assert result is not None
+    assert result.empty
+    assert list(result.columns) == []  # Should return empty DataFrame with standard columns</code></pre>
+
+    <h2 id="continuous-integration">Continuous Integration</h2>
+    <p>
+        Tests are automatically run in the CI/CD pipeline to ensure code quality. The pipeline includes:
+    </p>
+    <ul>
+        <li>Running all tests</li>
+        <li>Generating coverage reports</li>
+        <li>Enforcing minimum coverage thresholds</li>
+        <li>Running linting and static analysis</li>
+    </ul>
+    <p>
+        Tests are also run automatically when the Docker container starts, ensuring that the application
+        is functioning correctly in the deployed environment.
+    </p>
+    <div class="note">
+        <p>
+            <strong>Note:</strong> To disable automatic test execution on container startup, set the
+            <code>TEST_ON_STARTUP</code> environment variable to <code>false</code>.
+        </p>
+    </div>
+
+    <div class="note">
+        <p>
+            <strong>Note:</strong> For more detailed information about testing, refer to the test files
+            in the <code>tests</code> directory.
+        </p>
+    </div>
+
+    <script>
+        function copyToClipboard(button) {
+            const pre = button.previousElementSibling;
+            const text = pre.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

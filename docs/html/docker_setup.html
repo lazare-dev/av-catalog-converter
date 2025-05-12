@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Setup - AV Catalog Converter Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            margin-top: 25px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow: auto;
+            position: relative;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background-color: #2980b9;
+        }
+        .command-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        .endpoint {
+            background-color: #f0f7fb;
+            border-left: 5px solid #3498db;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .project-structure {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            line-height: 1.3;
+        }
+        .component {
+            background-color: #f9f9f9;
+            border-left: 3px solid #2ecc71;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .note {
+            background-color: #fff8dc;
+            border-left: 5px solid #f1c40f;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .warning {
+            background-color: #ffebee;
+            border-left: 5px solid #f44336;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #eaecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        .toc li {
+            margin-bottom: 5px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="index.html">Home</a> &gt; <a href="deployment.html">Deployment</a> &gt; Docker Setup
+    </div>
+
+    <h1>Docker Setup</h1>
+    
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#prerequisites">Prerequisites</a></li>
+            <li><a href="#docker-components">Docker Components</a>
+                <ul>
+                    <li><a href="#dockerfile">Dockerfile</a></li>
+                    <li><a href="#docker-compose">Docker Compose</a></li>
+                    <li><a href="#docker-entrypoint">Docker Entrypoint</a></li>
+                </ul>
+            </li>
+            <li><a href="#building-and-running">Building and Running</a>
+                <ul>
+                    <li><a href="#building-the-image">Building the Image</a></li>
+                    <li><a href="#running-the-container">Running the Container</a></li>
+                    <li><a href="#using-docker-compose">Using Docker Compose</a></li>
+                </ul>
+            </li>
+            <li><a href="#configuration">Configuration</a>
+                <ul>
+                    <li><a href="#environment-variables">Environment Variables</a></li>
+                    <li><a href="#volume-mounts">Volume Mounts</a></li>
+                    <li><a href="#network-configuration">Network Configuration</a></li>
+                </ul>
+            </li>
+            <li><a href="#production-deployment">Production Deployment</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+        </ul>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <p>
+        The AV Catalog Converter is designed to be deployed as a containerized application using Docker.
+        This approach provides several benefits:
+    </p>
+    <ul>
+        <li>Consistent environment across development, testing, and production</li>
+        <li>Easy deployment and scaling</li>
+        <li>Isolation from the host system</li>
+        <li>Simplified dependency management</li>
+    </ul>
+    <p>
+        This document provides detailed instructions for building, configuring, and running the AV Catalog Converter
+        using Docker.
+    </p>
+
+    <h2 id="prerequisites">Prerequisites</h2>
+    <p>
+        Before you begin, ensure you have the following installed:
+    </p>
+    <ul>
+        <li><a href="https://docs.docker.com/get-docker/" target="_blank">Docker</a> (version 20.10.0 or later)</li>
+        <li><a href="https://docs.docker.com/compose/install/" target="_blank">Docker Compose</a> (version 2.0.0 or later, optional but recommended)</li>
+        <li>At least 4GB of RAM available for Docker</li>
+        <li>At least 10GB of free disk space</li>
+    </ul>
+    <div class="note">
+        <p>
+            <strong>Note:</strong> The application uses the Microsoft Phi-2 model, which requires significant memory.
+            For optimal performance, ensure your Docker environment has at least 4GB of RAM allocated.
+        </p>
+    </div>
+
+    <h2 id="docker-components">Docker Components</h2>
+    
+    <h3 id="dockerfile">Dockerfile</h3>
+    <p>
+        The <code>Dockerfile</code> defines the container image for the AV Catalog Converter. It is located in the
+        root directory of the project.
+    </p>
+    <div class="component">
+        <h4>Key Features</h4>
+        <ul>
+            <li>Based on Python 3.10 slim image</li>
+            <li>Installs system dependencies</li>
+            <li>Sets up a non-root user for security</li>
+            <li>Installs Python dependencies from requirements.txt</li>
+            <li>Configures the application directory structure</li>
+            <li>Sets up the entrypoint script</li>
+        </ul>
+    </div>
+    <pre><code>FROM python:3.10-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Create app directory and set permissions
+WORKDIR /app
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Run tests on container startup
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set ownership
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 8080
+
+# Set entrypoint
+ENTRYPOINT ["/entrypoint.sh"]</code></pre>
+
+    <h3 id="docker-compose">Docker Compose</h3>
+    <p>
+        The <code>docker-compose.yml</code> file defines the services, networks, and volumes for the application.
+        It is located in the root directory of the project.
+    </p>
+    <div class="component">
+        <h4>Key Features</h4>
+        <ul>
+            <li>Defines the main application service</li>
+            <li>Maps ports for API access</li>
+            <li>Configures volume mounts for data persistence</li>
+            <li>Sets environment variables</li>
+            <li>Configures resource limits</li>
+        </ul>
+    </div>
+    <pre><code>version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - MODEL_QUANTIZATION=null
+      - CACHE_ENABLED=true
+      - RATE_LIMITING_ENABLED=true
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G</code></pre>
+
+    <h3 id="docker-entrypoint">Docker Entrypoint</h3>
+    <p>
+        The <code>entrypoint.sh</code> script is executed when the container starts. It is located in the
+        <code>docker</code> directory of the project.
+    </p>
+    <div class="component">
+        <h4>Key Features</h4>
+        <ul>
+            <li>Runs tests on startup</li>
+            <li>Initializes the application</li>
+            <li>Starts the API server</li>
+            <li>Handles graceful shutdown</li>
+        </ul>
+    </div>
+    <pre><code>#!/bin/bash
+set -e
+
+# Run tests if TEST_ON_STARTUP is enabled
+if [ "${TEST_ON_STARTUP}" = "true" ]; then
+    echo "Running tests..."
+    python -m pytest -xvs tests/
+fi
+
+# Initialize the application
+echo "Initializing application..."
+python -m core.init
+
+# Start the API server
+echo "Starting API server..."
+exec gunicorn app:app --bind 0.0.0.0:8080 --workers 4 --timeout 120 --access-logfile - --error-logfile -</code></pre>
+
+    <h2 id="building-and-running">Building and Running</h2>
+    
+    <h3 id="building-the-image">Building the Image</h3>
+    <p>
+        To build the Docker image, run the following command from the project root directory:
+    </p>
+    <div class="command-container">
+        <pre><code>docker build -t av-catalog-converter .</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>
+        This will create a Docker image named <code>av-catalog-converter</code> based on the Dockerfile.
+    </p>
+
+    <h3 id="running-the-container">Running the Container</h3>
+    <p>
+        To run the container, use the following command:
+    </p>
+    <div class="command-container">
+        <pre><code>docker run -p 8080:8080 -v $(pwd)/data:/app/data -v $(pwd)/logs:/app/logs av-catalog-converter</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>
+        This will start the container and map port 8080 from the container to port 8080 on the host.
+        It also mounts the <code>data</code> and <code>logs</code> directories from the host to the container.
+    </p>
+
+    <h3 id="using-docker-compose">Using Docker Compose</h3>
+    <p>
+        To build and run the container using Docker Compose, use the following command:
+    </p>
+    <div class="command-container">
+        <pre><code>docker-compose up -d</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>
+        This will build the image if it doesn't exist and start the container in detached mode.
+    </p>
+    <p>
+        To stop the container, use:
+    </p>
+    <div class="command-container">
+        <pre><code>docker-compose down</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h2 id="configuration">Configuration</h2>
+    
+    <h3 id="environment-variables">Environment Variables</h3>
+    <p>
+        The application can be configured using environment variables. These can be set in the
+        <code>docker-compose.yml</code> file or passed to the <code>docker run</code> command.
+    </p>
+    <table>
+        <tr>
+            <th>Variable</th>
+            <th>Description</th>
+            <th>Default</th>
+        </tr>
+        <tr>
+            <td>ENVIRONMENT</td>
+            <td>Environment (production, development, testing)</td>
+            <td>production</td>
+        </tr>
+        <tr>
+            <td>LOG_LEVEL</td>
+            <td>Logging level (DEBUG, INFO, WARNING, ERROR)</td>
+            <td>INFO</td>
+        </tr>
+        <tr>
+            <td>MODEL_QUANTIZATION</td>
+            <td>LLM quantization level (4bit, 8bit, null)</td>
+            <td>null</td>
+        </tr>
+        <tr>
+            <td>CACHE_ENABLED</td>
+            <td>Enable LLM response caching</td>
+            <td>true</td>
+        </tr>
+        <tr>
+            <td>CACHE_TTL</td>
+            <td>Cache TTL in seconds</td>
+            <td>3600</td>
+        </tr>
+        <tr>
+            <td>RATE_LIMITING_ENABLED</td>
+            <td>Enable rate limiting for LLM requests</td>
+            <td>true</td>
+        </tr>
+        <tr>
+            <td>REQUESTS_PER_MINUTE</td>
+            <td>Maximum LLM requests per minute</td>
+            <td>60</td>
+        </tr>
+        <tr>
+            <td>TEST_ON_STARTUP</td>
+            <td>Run tests on container startup</td>
+            <td>true</td>
+        </tr>
+    </table>
+
+    <h3 id="volume-mounts">Volume Mounts</h3>
+    <p>
+        The application uses the following volume mounts:
+    </p>
+    <table>
+        <tr>
+            <th>Host Path</th>
+            <th>Container Path</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>./data</td>
+            <td>/app/data</td>
+            <td>Data directory for input/output files</td>
+        </tr>
+        <tr>
+            <td>./logs</td>
+            <td>/app/logs</td>
+            <td>Log directory</td>
+        </tr>
+    </table>
+    <p>
+        To persist data between container restarts, ensure these directories exist on the host and are mounted
+        to the container.
+    </p>
+
+    <h3 id="network-configuration">Network Configuration</h3>
+    <p>
+        By default, the application exposes port 8080 for the API. This can be changed by modifying the
+        <code>docker-compose.yml</code> file or the <code>docker run</code> command.
+    </p>
+    <p>
+        To change the port mapping, modify the <code>ports</code> section in <code>docker-compose.yml</code>:
+    </p>
+    <pre><code>ports:
+  - "9090:8080"  # Map container port 8080 to host port 9090</code></pre>
+    <p>
+        Or when using <code>docker run</code>:
+    </p>
+    <div class="command-container">
+        <pre><code>docker run -p 9090:8080 av-catalog-converter</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <h2 id="production-deployment">Production Deployment</h2>
+    <p>
+        For production deployment, consider the following recommendations:
+    </p>
+    <ul>
+        <li><strong>Use a reverse proxy</strong> (e.g., Nginx) to handle SSL termination and load balancing</li>
+        <li><strong>Set resource limits</strong> to prevent container resource exhaustion</li>
+        <li><strong>Use Docker Compose or Kubernetes</strong> for orchestration</li>
+        <li><strong>Enable health checks</strong> for monitoring and automatic recovery</li>
+        <li><strong>Set up monitoring</strong> using Prometheus and Grafana</li>
+        <li><strong>Configure backups</strong> for data volumes</li>
+    </ul>
+    <p>
+        Example Nginx configuration for SSL termination:
+    </p>
+    <pre><code>server {
+    listen 443 ssl;
+    server_name catalog-converter.example.com;
+
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+
+    location / {
+        proxy_pass http://app:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+
+    <h2 id="troubleshooting">Troubleshooting</h2>
+    <p>
+        Common issues and solutions:
+    </p>
+    <table>
+        <tr>
+            <th>Issue</th>
+            <th>Possible Cause</th>
+            <th>Solution</th>
+        </tr>
+        <tr>
+            <td>Container fails to start</td>
+            <td>Insufficient memory</td>
+            <td>Increase Docker memory allocation or use model quantization</td>
+        </tr>
+        <tr>
+            <td>API is slow or unresponsive</td>
+            <td>Insufficient CPU resources</td>
+            <td>Increase CPU allocation or reduce worker count</td>
+        </tr>
+        <tr>
+            <td>Permission errors</td>
+            <td>Volume mount permissions</td>
+            <td>Ensure host directories have correct permissions</td>
+        </tr>
+        <tr>
+            <td>Tests failing on startup</td>
+            <td>Code or configuration issues</td>
+            <td>Check logs and fix failing tests, or disable TEST_ON_STARTUP</td>
+        </tr>
+    </table>
+    <p>
+        To view container logs:
+    </p>
+    <div class="command-container">
+        <pre><code>docker logs av-catalog-converter</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+    <p>
+        To access a running container's shell:
+    </p>
+    <div class="command-container">
+        <pre><code>docker exec -it av-catalog-converter /bin/bash</code></pre>
+        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+    </div>
+
+    <div class="note">
+        <p>
+            <strong>Note:</strong> For more detailed information about Docker deployment, refer to the
+            <code>docker/README.md</code> file in the project repository.
+        </p>
+    </div>
+
+    <script>
+        function copyToClipboard(button) {
+            const pre = button.previousElementSibling;
+            const text = pre.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

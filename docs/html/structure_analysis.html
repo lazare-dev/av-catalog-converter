@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structure Analysis - AV Catalog Converter Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            margin-top: 25px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow: auto;
+            position: relative;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background-color: #2980b9;
+        }
+        .command-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        .endpoint {
+            background-color: #f0f7fb;
+            border-left: 5px solid #3498db;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .project-structure {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            line-height: 1.3;
+        }
+        .component {
+            background-color: #f9f9f9;
+            border-left: 3px solid #2ecc71;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .note {
+            background-color: #fff8dc;
+            border-left: 5px solid #f1c40f;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .warning {
+            background-color: #ffebee;
+            border-left: 5px solid #f44336;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #eaecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        .toc li {
+            margin-bottom: 5px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="index.html">Home</a> &gt; <a href="data_pipeline.html">Data Processing Pipeline</a> &gt; Structure Analysis
+    </div>
+
+    <h1>Structure Analysis</h1>
+    
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#components">Components</a>
+                <ul>
+                    <li><a href="#structure-analyzer">Structure Analyzer</a></li>
+                    <li><a href="#header-detector">Header Detector</a></li>
+                    <li><a href="#data-boundary-detector">Data Boundary Detector</a></li>
+                    <li><a href="#ai-analysis">AI-Powered Analysis</a></li>
+                </ul>
+            </li>
+            <li><a href="#analysis-process">Analysis Process</a>
+                <ul>
+                    <li><a href="#column-type-analysis">Column Type Analysis</a></li>
+                    <li><a href="#data-quality-analysis">Data Quality Analysis</a></li>
+                    <li><a href="#nested-structure-detection">Nested Structure Detection</a></li>
+                    <li><a href="#ai-structure-analysis">AI Structure Analysis</a></li>
+                </ul>
+            </li>
+            <li><a href="#output">Analysis Output</a></li>
+            <li><a href="#usage">Usage Examples</a></li>
+            <li><a href="#customization">Customization</a></li>
+        </ul>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <p>
+        The Structure Analysis component is responsible for analyzing the structure of input data to understand its format,
+        column types, relationships, and quality. This analysis is crucial for the subsequent field mapping process, as it
+        provides the context needed to map input fields to the standardized schema.
+    </p>
+    <p>
+        The Structure Analysis component combines traditional heuristic-based analysis with AI-powered techniques to provide
+        a comprehensive understanding of the data structure, even for complex or unusual formats.
+    </p>
+
+    <h2 id="components">Components</h2>
+    
+    <h3 id="structure-analyzer">Structure Analyzer</h3>
+    <p>
+        The <code>StructureAnalyzer</code> class is the main entry point for structure analysis. It coordinates the analysis
+        process and integrates the results from various sub-analyzers.
+    </p>
+    <div class="component">
+        <h4>Key Methods</h4>
+        <ul>
+            <li><code>analyze(data)</code> - Analyzes the structure of the input data</li>
+            <li><code>_analyze_column_types(data)</code> - Analyzes types and patterns in each column</li>
+            <li><code>_analyze_data_quality(data)</code> - Analyzes data quality issues</li>
+            <li><code>_detect_nested_structure(data)</code> - Detects hierarchical relationships</li>
+            <li><code>_perform_ai_analysis(data, basic_analysis)</code> - Performs AI-powered analysis</li>
+        </ul>
+    </div>
+
+    <h3 id="header-detector">Header Detector</h3>
+    <p>
+        The <code>HeaderDetector</code> class is responsible for detecting and cleaning header rows in the input data.
+        It can identify multiple header rows, merged headers, and non-standard header formats.
+    </p>
+    <div class="component">
+        <h4>Key Methods</h4>
+        <ul>
+            <li><code>detect_headers(data)</code> - Detects header rows in the data</li>
+            <li><code>clean_headers(data, header_info)</code> - Cleans and normalizes headers</li>
+            <li><code>is_header_row(row)</code> - Determines if a row is likely a header</li>
+        </ul>
+    </div>
+
+    <h3 id="data-boundary-detector">Data Boundary Detector</h3>
+    <p>
+        The <code>DataBoundaryDetector</code> class identifies the boundaries of the actual data within the input.
+        It can handle files with metadata, notes, or multiple data sections.
+    </p>
+    <div class="component">
+        <h4>Key Methods</h4>
+        <ul>
+            <li><code>detect_boundaries(data)</code> - Detects the boundaries of the data</li>
+            <li><code>find_data_start(data)</code> - Finds the starting row of the data</li>
+            <li><code>find_data_end(data)</code> - Finds the ending row of the data</li>
+        </ul>
+    </div>
+
+    <h3 id="ai-analysis">AI-Powered Analysis</h3>
+    <p>
+        The AI-powered analysis uses the LLM integration to provide deeper insights into the data structure.
+        It can identify complex patterns, suggest field mappings, and detect data quality issues that might be
+        missed by traditional heuristic approaches.
+    </p>
+    <div class="component">
+        <h4>Key Methods</h4>
+        <ul>
+            <li><code>_perform_ai_analysis(data, basic_analysis)</code> - Performs AI-powered analysis</li>
+            <li><code>_parse_ai_response(response)</code> - Parses the AI response into structured data</li>
+            <li><code>_validate_ai_analysis(ai_analysis, basic_analysis)</code> - Validates and enhances AI analysis</li>
+        </ul>
+    </div>
+
+    <h2 id="analysis-process">Analysis Process</h2>
+    
+    <h3 id="column-type-analysis">Column Type Analysis</h3>
+    <p>
+        The column type analysis examines each column to determine its likely data type and characteristics.
+        It uses a combination of pattern matching, statistical analysis, and heuristics.
+    </p>
+    <div class="component">
+        <h4>Detected Column Types</h4>
+        <ul>
+            <li><strong>string</strong> - General text data</li>
+            <li><strong>integer</strong> - Whole number values</li>
+            <li><strong>decimal</strong> - Floating-point values</li>
+            <li><strong>price</strong> - Monetary values with currency symbols</li>
+            <li><strong>url</strong> - Web URLs</li>
+            <li><strong>id</strong> - Identifier codes (SKUs, part numbers, etc.)</li>
+            <li><strong>date</strong> - Date values</li>
+            <li><strong>boolean</strong> - True/false values</li>
+        </ul>
+    </div>
+    <p>
+        For each column, the analysis also calculates:
+    </p>
+    <ul>
+        <li><strong>unique_count</strong> - Number of unique values</li>
+        <li><strong>unique_ratio</strong> - Ratio of unique values to total values</li>
+        <li><strong>sample_values</strong> - Sample of values from the column</li>
+        <li><strong>empty</strong> - Whether the column is empty</li>
+    </ul>
+
+    <h3 id="data-quality-analysis">Data Quality Analysis</h3>
+    <p>
+        The data quality analysis identifies potential issues in the data that might affect processing.
+        It checks for missing values, duplicates, and inconsistencies.
+    </p>
+    <div class="component">
+        <h4>Data Quality Checks</h4>
+        <ul>
+            <li><strong>Missing Values</strong> - Columns with null or empty values</li>
+            <li><strong>Duplicates</strong> - Duplicate rows or values</li>
+            <li><strong>Inconsistencies</strong> - Mixed data types or formats within a column</li>
+            <li><strong>Outliers</strong> - Values that deviate significantly from the norm</li>
+        </ul>
+    </div>
+
+    <h3 id="nested-structure-detection">Nested Structure Detection</h3>
+    <p>
+        The nested structure detection identifies hierarchical relationships in the data, such as categories and subcategories.
+        It analyzes patterns in the data to detect parent-child relationships.
+    </p>
+    <div class="component">
+        <h4>Hierarchy Detection</h4>
+        <ul>
+            <li><strong>Hierarchy Columns</strong> - Columns that form a hierarchy</li>
+            <li><strong>Level Counts</strong> - Number of items at each level</li>
+            <li><strong>Parent-Child Relationships</strong> - Mapping between parent and child items</li>
+        </ul>
+    </div>
+
+    <h3 id="ai-structure-analysis">AI Structure Analysis</h3>
+    <p>
+        The AI structure analysis uses the LLM integration to provide deeper insights into the data structure.
+        It generates a prompt with sample data and basic analysis results, and the LLM responds with additional
+        insights and suggestions.
+    </p>
+    <div class="component">
+        <h4>AI Analysis Output</h4>
+        <ul>
+            <li><strong>Column Analysis</strong> - Detailed analysis of each column</li>
+            <li><strong>Structure Notes</strong> - General observations about the data structure</li>
+            <li><strong>Possible Field Mappings</strong> - Suggested mappings to standard fields</li>
+            <li><strong>Data Quality Issues</strong> - Identified data quality problems</li>
+        </ul>
+    </div>
+
+    <h2 id="output">Analysis Output</h2>
+    <p>
+        The structure analysis produces a comprehensive analysis result with the following information:
+    </p>
+    <pre><code>{
+    "original_columns": ["col1", "col2", "col3", ...],
+    "data_shape": [rows, columns],
+    "column_types": {
+        "col1": {
+            "type": "string",
+            "unique_count": 100,
+            "unique_ratio": 0.5,
+            "sample_values": ["value1", "value2", ...],
+            "empty": false
+        },
+        // More columns...
+    },
+    "data_quality": {
+        "missing_values": {
+            "col2": {
+                "count": 10,
+                "percentage": 5.0
+            }
+        },
+        "duplicates": {
+            "rows": {
+                "count": 5,
+                "percentage": 2.5
+            }
+        },
+        "inconsistencies": {
+            "col3": {
+                "issue": "mixed_types",
+                "details": "Column contains both numeric (30.0%) and non-numeric values"
+            }
+        }
+    },
+    "nested_structure": {
+        "has_nested_structure": true,
+        "hierarchy_columns": ["category", "subcategory"],
+        "level_counts": {
+            "category": 10,
+            "subcategory": 50
+        }
+    },
+    "header_info": {
+        "header_rows": [0],
+        "merged_headers": false,
+        "clean_headers": ["col1", "col2", "col3", ...]
+    },
+    "data_boundaries": {
+        "data_start": 1,
+        "data_end": 200
+    },
+    "column_analysis": {
+        // AI-generated column analysis
+    },
+    "structure_notes": "This appears to be a product catalog with...",
+    "possible_field_mappings": {
+        "SKU": {
+            "column": "col1",
+            "confidence": 0.9,
+            "reasoning": "Column contains unique alphanumeric codes"
+        },
+        // More mappings...
+    },
+    "data_quality_issues": [
+        "Missing values in manufacturer column",
+        "Inconsistent price formats"
+    ]
+}</code></pre>
+
+    <h2 id="usage">Usage Examples</h2>
+    <p>
+        Here's a simple example of how to use the Structure Analyzer:
+    </p>
+    <pre><code>from services.structure.structure_analyzer import StructureAnalyzer
+import pandas as pd
+
+# Load data
+data = pd.read_csv('catalog.csv')
+
+# Create analyzer
+analyzer = StructureAnalyzer()
+
+# Analyze data
+structure_info = analyzer.analyze(data)
+
+# Use the analysis results
+print(f"Found {len(structure_info['original_columns'])} columns")
+print(f"Data shape: {structure_info['data_shape']}")
+
+# Check column types
+for col, info in structure_info['column_types'].items():
+    print(f"Column '{col}' is of type '{info['type']}' with {info['unique_count']} unique values")
+
+# Check for data quality issues
+if structure_info['data_quality']['missing_values']:
+    print("Missing values detected in the following columns:")
+    for col, info in structure_info['data_quality']['missing_values'].items():
+        print(f"  - {col}: {info['count']} missing values ({info['percentage']:.1f}%)")
+
+# Check for nested structure
+if structure_info['nested_structure']['has_nested_structure']:
+    print("Nested structure detected:")
+    print(f"  - Hierarchy columns: {structure_info['nested_structure']['hierarchy_columns']}")
+    print(f"  - Level counts: {structure_info['nested_structure']['level_counts']}")
+
+# Check AI-suggested field mappings
+if 'possible_field_mappings' in structure_info:
+    print("Suggested field mappings:")
+    for field, mapping in structure_info['possible_field_mappings'].items():
+        print(f"  - {field} -> {mapping['column']} (confidence: {mapping['confidence']:.2f})")
+        print(f"    Reasoning: {mapping['reasoning']}")</code></pre>
+
+    <h2 id="customization">Customization</h2>
+    <p>
+        The Structure Analyzer can be customized in several ways:
+    </p>
+    <ul>
+        <li><strong>Custom Column Type Detection</strong> - Add new patterns or heuristics for column type detection</li>
+        <li><strong>Custom Data Quality Checks</strong> - Add additional data quality checks</li>
+        <li><strong>Custom Nested Structure Detection</strong> - Modify the hierarchy detection logic</li>
+        <li><strong>Custom AI Prompts</strong> - Adjust the prompts used for AI analysis</li>
+    </ul>
+    <p>
+        Example of adding a custom column type detection:
+    </p>
+    <pre><code>def custom_analyze_column_types(self, data):
+    # Get the original analysis
+    column_types = super()._analyze_column_types(data)
+    
+    # Add custom detection for product codes
+    for col in data.columns:
+        col_data = data[col].dropna()
+        if len(col_data) == 0:
+            continue
+            
+        # Check for product code pattern (e.g., ABC-12345)
+        product_code_pattern = col_data.astype(str).str.match(r'^[A-Z]{3}-\d{5}$')
+        if product_code_pattern.sum() / len(col_data) > 0.8:
+            column_types[col]["type"] = "product_code"
+            
+    return column_types</code></pre>
+
+    <div class="note">
+        <p>
+            <strong>Note:</strong> For more detailed information about the structure analysis, refer to the source code in the <code>services/structure</code> directory.
+        </p>
+    </div>
+
+    <script>
+        function copyToClipboard(button) {
+            const pre = button.previousElementSibling;
+            const text = pre.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>

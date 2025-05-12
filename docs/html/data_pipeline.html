@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Processing Pipeline - AV Catalog Converter Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            margin-top: 25px;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            overflow: auto;
+            position: relative;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background-color: #2980b9;
+        }
+        .command-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        ul, ol {
+            padding-left: 25px;
+        }
+        .endpoint {
+            background-color: #f0f7fb;
+            border-left: 5px solid #3498db;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .project-structure {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            line-height: 1.3;
+        }
+        .component {
+            background-color: #f9f9f9;
+            border-left: 3px solid #2ecc71;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .note {
+            background-color: #fff8dc;
+            border-left: 5px solid #f1c40f;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .warning {
+            background-color: #ffebee;
+            border-left: 5px solid #f44336;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #eaecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        .toc li {
+            margin-bottom: 5px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .pipeline-diagram {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            display: block;
+        }
+        .step {
+            background-color: #e8f4fc;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .step::after {
+            content: "↓";
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            font-size: 20px;
+            color: #3498db;
+        }
+        .step:last-child::after {
+            content: "";
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="index.html">Home</a> &gt; Data Processing Pipeline
+    </div>
+
+    <h1>Data Processing Pipeline</h1>
+    
+    <div class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#pipeline-stages">Pipeline Stages</a>
+                <ul>
+                    <li><a href="#file-parsing">File Parsing</a></li>
+                    <li><a href="#structure-analysis">Structure Analysis</a></li>
+                    <li><a href="#field-mapping">Field Mapping</a></li>
+                    <li><a href="#category-extraction">Category Extraction</a></li>
+                    <li><a href="#value-normalization">Value Normalization</a></li>
+                    <li><a href="#output-validation">Output Validation</a></li>
+                </ul>
+            </li>
+            <li><a href="#data-flow">Data Flow</a></li>
+            <li><a href="#error-handling">Error Handling</a></li>
+            <li><a href="#performance">Performance Considerations</a></li>
+            <li><a href="#customization">Customizing the Pipeline</a></li>
+            <li><a href="#monitoring">Monitoring and Logging</a></li>
+        </ul>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <p>
+        The Data Processing Pipeline is the core workflow of the AV Catalog Converter. It transforms raw catalog data from various
+        formats and structures into a standardized output format. The pipeline consists of several stages, each responsible for a
+        specific aspect of the transformation process.
+    </p>
+    <p>
+        The pipeline is designed to be:
+    </p>
+    <ul>
+        <li><strong>Modular</strong> - Each stage is independent and can be modified or replaced</li>
+        <li><strong>Robust</strong> - Comprehensive error handling at each stage</li>
+        <li><strong>Transparent</strong> - Detailed logging and progress tracking</li>
+        <li><strong>Efficient</strong> - Optimized for performance with large datasets</li>
+    </ul>
+
+    <h2 id="pipeline-stages">Pipeline Stages</h2>
+    
+    <div class="step">
+        <h3 id="file-parsing">1. File Parsing</h3>
+        <p>
+            The first stage of the pipeline is file parsing, where the input file is read and converted into a pandas DataFrame.
+            This stage handles different file formats, encodings, and data structures.
+        </p>
+        <div class="component">
+            <h4>Key Components</h4>
+            <ul>
+                <li><code>ParserFactory</code> - Creates the appropriate parser based on file extension</li>
+                <li><code>BaseParser</code> - Abstract base class for all parsers</li>
+                <li>Format-specific parsers (CSV, Excel, JSON, XML)</li>
+            </ul>
+        </div>
+        <p>
+            For more details, see the <a href="file_parsers.html">File Parsers documentation</a>.
+        </p>
+    </div>
+    
+    <div class="step">
+        <h3 id="structure-analysis">2. Structure Analysis</h3>
+        <p>
+            The structure analysis stage examines the parsed data to understand its structure, column types, and relationships.
+            This information is used to guide the field mapping process.
+        </p>
+        <div class="component">
+            <h4>Key Components</h4>
+            <ul>
+                <li><code>StructureAnalyzer</code> - Main class for analyzing data structure</li>
+                <li><code>HeaderDetector</code> - Detects and cleans header rows</li>
+                <li><code>DataBoundaryDetector</code> - Identifies the boundaries of the actual data</li>
+                <li>AI-powered structure analysis using the LLM integration</li>
+            </ul>
+        </div>
+        <p>
+            For more details, see the <a href="structure_analysis.html">Structure Analysis documentation</a>.
+        </p>
+    </div>
+    
+    <div class="step">
+        <h3 id="field-mapping">3. Field Mapping</h3>
+        <p>
+            The field mapping stage maps input columns to the standardized schema fields. It uses a combination of direct matching,
+            pattern matching, and AI-assisted semantic mapping.
+        </p>
+        <div class="component">
+            <h4>Key Components</h4>
+            <ul>
+                <li><code>FieldMapper</code> - Main class for field mapping</li>
+                <li><code>DirectMapper</code> - Maps fields based on direct name matching</li>
+                <li><code>PatternMapper</code> - Maps fields based on pattern matching</li>
+                <li><code>SemanticMapper</code> - Maps fields based on semantic similarity using LLM</li>
+            </ul>
+        </div>
+        <p>
+            For more details, see the <a href="field_mapping.html">Field Mapping documentation</a>.
+        </p>
+    </div>
+    
+    <div class="step">
+        <h3 id="category-extraction">4. Category Extraction</h3>
+        <p>
+            The category extraction stage identifies and normalizes product categories from the data. It extracts both primary
+            categories and subcategories, and maps them to a standardized category hierarchy.
+        </p>
+        <div class="component">
+            <h4>Key Components</h4>
+            <ul>
+                <li><code>CategoryExtractor</code> - Main class for category extraction</li>
+                <li><code>CategoryMapper</code> - Maps raw categories to standardized ones</li>
+                <li><code>CategoryHierarchy</code> - Manages the category hierarchy</li>
+                <li>AI-assisted category extraction using the LLM integration</li>
+            </ul>
+        </div>
+        <p>
+            For more details, see the <a href="category_extraction.html">Category Extraction documentation</a>.
+        </p>
+    </div>
+    
+    <div class="step">
+        <h3 id="value-normalization">5. Value Normalization</h3>
+        <p>
+            The value normalization stage standardizes values across fields for consistency. It handles unit conversions,
+            formatting, and data cleaning.
+        </p>
+        <div class="component">
+            <h4>Key Components</h4>
+            <ul>
+                <li><code>ValueNormalizer</code> - Main class for value normalization</li>
+                <li><code>UnitConverter</code> - Converts between different units</li>
+                <li><code>PriceNormalizer</code> - Normalizes price formats</li>
+                <li><code>TextCleaner</code> - Cleans and standardizes text fields</li>
+            </ul>
+        </div>
+        <p>
+            For more details, see the <a href="value_normalization.html">Value Normalization documentation</a>.
+        </p>
+    </div>
+    
+    <div class="step">
+        <h3 id="output-validation">6. Output Validation</h3>
+        <p>
+            The final stage validates the processed data against the output schema to ensure it meets all requirements.
+            It checks for required fields, data types, and value constraints.
+        </p>
+        <div class="component">
+            <h4>Key Components</h4>
+            <ul>
+                <li><code>validate_output</code> - Main function for output validation</li>
+                <li><code>SchemaValidator</code> - Validates data against the schema</li>
+                <li><code>DataQualityChecker</code> - Checks data quality metrics</li>
+            </ul>
+        </div>
+        <p>
+            For more details, see the <a href="validation.html">Validation documentation</a>.
+        </p>
+    </div>
+
+    <h2 id="data-flow">Data Flow</h2>
+    <p>
+        The data flows through the pipeline as follows:
+    </p>
+    <ol>
+        <li><strong>Input File</strong> → <strong>Parsed DataFrame</strong> (File Parsing)</li>
+        <li><strong>Parsed DataFrame</strong> → <strong>Structure Information</strong> (Structure Analysis)</li>
+        <li><strong>Parsed DataFrame + Structure Information</strong> → <strong>Mapped DataFrame</strong> (Field Mapping)</li>
+        <li><strong>Mapped DataFrame</strong> → <strong>Categorized DataFrame</strong> (Category Extraction)</li>
+        <li><strong>Categorized DataFrame</strong> → <strong>Normalized DataFrame</strong> (Value Normalization)</li>
+        <li><strong>Normalized DataFrame</strong> → <strong>Validated DataFrame</strong> (Output Validation)</li>
+        <li><strong>Validated DataFrame</strong> → <strong>Output File</strong> (CSV, Excel, or JSON)</li>
+    </ol>
+
+    <h2 id="error-handling">Error Handling</h2>
+    <p>
+        The pipeline includes comprehensive error handling at each stage:
+    </p>
+    <ul>
+        <li><strong>Stage-specific Exceptions</strong> - Each stage has its own exception types</li>
+        <li><strong>Graceful Degradation</strong> - The pipeline attempts to continue processing even if some stages fail</li>
+        <li><strong>Detailed Error Messages</strong> - Error messages include context and suggestions</li>
+        <li><strong>Error Logging</strong> - All errors are logged with stack traces for debugging</li>
+    </ul>
+    <div class="note">
+        <p>
+            If a critical stage fails (e.g., file parsing), the pipeline will stop processing and return an error.
+            For non-critical stages, the pipeline will attempt to continue with default or partial results.
+        </p>
+    </div>
+
+    <h2 id="performance">Performance Considerations</h2>
+    <p>
+        For optimal performance with large datasets, consider the following:
+    </p>
+    <ul>
+        <li><strong>Chunked Processing</strong> - Process large files in chunks to reduce memory usage</li>
+        <li><strong>Parallel Processing</strong> - Enable parallel processing for CPU-intensive stages</li>
+        <li><strong>Caching</strong> - Enable caching for LLM responses to avoid redundant API calls</li>
+        <li><strong>Memory Optimization</strong> - Use memory-efficient data structures and operations</li>
+        <li><strong>Selective Processing</strong> - Process only necessary columns and rows</li>
+    </ul>
+    <div class="warning">
+        <p>
+            <strong>Note:</strong> Enabling all performance optimizations may increase CPU and memory usage.
+            Monitor system resources and adjust settings accordingly.
+        </p>
+    </div>
+
+    <h2 id="customization">Customizing the Pipeline</h2>
+    <p>
+        The pipeline can be customized in several ways:
+    </p>
+    <ul>
+        <li><strong>Configuration</strong> - Adjust settings in <code>config/settings.py</code></li>
+        <li><strong>Custom Parsers</strong> - Add support for new file formats</li>
+        <li><strong>Custom Mappers</strong> - Implement custom field mapping logic</li>
+        <li><strong>Custom Normalizers</strong> - Add specialized normalization for specific fields</li>
+        <li><strong>Pipeline Extensions</strong> - Add new stages to the pipeline</li>
+    </ul>
+    <p>
+        Example of customizing the pipeline:
+    </p>
+    <pre><code># Custom pipeline with additional stages
+def custom_process_file(input_path, output_format='csv'):
+    # Standard stages
+    parser = ParserFactory.create_parser(input_path)
+    raw_data = parser.parse()
+    
+    # Custom pre-processing stage
+    raw_data = custom_preprocess(raw_data)
+    
+    analyzer = StructureAnalyzer()
+    structure_info = analyzer.analyze(raw_data)
+    
+    field_mapper = FieldMapper()
+    mapped_data = field_mapper.map(raw_data, structure_info)
+    
+    # Custom intermediate processing
+    mapped_data = custom_process(mapped_data)
+    
+    category_extractor = CategoryExtractor()
+    categorized_data = category_extractor.extract_categories(mapped_data)
+    
+    normalizer = ValueNormalizer()
+    normalized_data = normalizer.normalize(categorized_data)
+    
+    # Custom post-processing stage
+    normalized_data = custom_postprocess(normalized_data)
+    
+    validated_data = validate_output(normalized_data)
+    
+    return validated_data</code></pre>
+
+    <h2 id="monitoring">Monitoring and Logging</h2>
+    <p>
+        The pipeline includes comprehensive logging and progress tracking:
+    </p>
+    <ul>
+        <li><strong>Progress Logger</strong> - Tracks progress through the pipeline stages</li>
+        <li><strong>Structured Logging</strong> - Logs include context and metadata</li>
+        <li><strong>Performance Metrics</strong> - Timing and resource usage for each stage</li>
+        <li><strong>Error Tracking</strong> - Detailed error logs with stack traces</li>
+    </ul>
+    <p>
+        Example of monitoring pipeline progress:
+    </p>
+    <pre><code>from utils.logging.progress_logger import ProgressLogger
+
+progress = ProgressLogger()
+progress.start_task("Processing file")
+
+# Track progress through stages
+progress.update_task("Parsing input file", 10)
+# ... parsing code ...
+
+progress.update_task("Analyzing structure", 20)
+# ... structure analysis code ...
+
+# ... other stages ...
+
+progress.complete_task("Processing complete")</code></pre>
+
+    <div class="note">
+        <p>
+            <strong>Note:</strong> For more detailed information about the data processing pipeline, refer to the <code>process_file</code> function in <code>app.py</code>.
+        </p>
+    </div>
+
+    <script>
+        function copyToClipboard(button) {
+            const pre = button.previousElementSibling;
+            const text = pre.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+</body>
+</html>
