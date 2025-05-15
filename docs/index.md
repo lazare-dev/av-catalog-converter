@@ -2,6 +2,22 @@
 
 Welcome to the AV Catalog Converter documentation. This documentation provides comprehensive information about the application, its features, and how to use it.
 
+## Overview
+
+The AV Catalog Converter is a powerful tool for standardizing audio-visual equipment catalogs from various manufacturers into a consistent format. It uses advanced machine learning techniques to automatically detect and map fields, normalize values, and produce standardized output formats.
+
+## Key Features
+
+- **Multi-Format Support**: Parse catalogs from multiple file formats (CSV, Excel, PDF, JSON, XML)
+- **Intelligent Field Mapping**: Automatically detect file structure and map fields to standard formats using DistilBERT LLM technology
+- **Category Normalization**: Extract and normalize product categories into a standardized hierarchy
+- **Value Standardization**: Normalize prices, IDs, descriptions, and other text fields
+- **Flexible Export Options**: Export to CSV, Excel, or JSON formats with customizable options
+- **Web API**: RESTful API for integration with other systems
+- **Performance Optimized**: Parallel processing, adaptive caching, and intelligent rate limiting for efficient operation
+- **Extensible Architecture**: Easily add new parsers, normalizers, and export formats
+- **Comprehensive Logging**: Detailed logging throughout the application for troubleshooting
+
 ## Table of Contents
 
 ### Getting Started
@@ -23,6 +39,11 @@ Welcome to the AV Catalog Converter documentation. This documentation provides c
 - [Performance Optimization Guide](performance_optimization.md)
 - [Profiling Tools](performance_optimization.md#profiling-tools)
 - [Memory Optimization](performance_optimization.md#memory-optimization)
+
+### LLM Integration
+- [LLM Overview](#llm-integration)
+- [Field Mapping with LLM](#field-mapping-with-llm)
+- [Text Analysis](#text-analysis)
 
 ### Examples
 - [Command Line Examples](#command-line-examples)
@@ -173,7 +194,7 @@ if error:
 else:
     # Use the processed data
     print(f"Processed {len(data)} rows with {len(data.columns)} columns")
-    
+
     # Save to CSV
     data.to_csv("data/output/standardized.csv", index=False)
 ```
@@ -191,23 +212,23 @@ def process_catalog():
     # Get the file from the request
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
-    
+
     file = request.files['file']
-    
+
     # Send the file to the AV Catalog Converter API
     converter_url = "http://localhost:8080/api/upload"
     files = {"file": file}
     data = {"format": "json"}
-    
+
     response = requests.post(converter_url, files=files, data=data)
-    
+
     if response.status_code == 200:
         # Process the standardized data
         standardized_data = response.json()
-        
+
         # Do something with the data
         result = process_standardized_data(standardized_data)
-        
+
         return jsonify(result)
     else:
         return jsonify({'error': response.json().get('error')}), response.status_code
@@ -227,14 +248,14 @@ def batch_process_catalogs(input_dir, output_dir):
     """Process all catalog files in a directory"""
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # Get all files in the input directory
     files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
-    
+
     for file in files:
         input_path = os.path.join(input_dir, file)
         output_path = os.path.join(output_dir, f"standardized_{file}")
-        
+
         # Process the file
         try:
             subprocess.run([
@@ -243,9 +264,9 @@ def batch_process_catalogs(input_dir, output_dir):
                 "--output", output_path,
                 "--format", "csv"
             ], check=True)
-            
+
             logging.info(f"Successfully processed {file}")
-            
+
         except subprocess.CalledProcessError as e:
             logging.error(f"Error processing {file}: {e}")
 
@@ -253,3 +274,59 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     batch_process_catalogs("data/input", "data/output")
 ```
+
+## LLM Integration
+
+The AV Catalog Converter uses DistilBERT with 8-bit quantization for field mapping and text analysis. This provides several benefits:
+
+1. **Efficient Field Mapping**: The LLM can understand the semantic meaning of column names and map them to the standardized schema, even when the names are different.
+
+2. **Text Analysis**: The LLM can analyze product descriptions and extract relevant information such as categories, features, and specifications.
+
+3. **Performance Optimization**: The use of 8-bit quantization reduces memory usage while maintaining accuracy.
+
+4. **Adaptive Caching**: The LLM responses are cached to improve performance for similar requests.
+
+5. **Rate Limiting**: The LLM requests are rate-limited to prevent overloading the system.
+
+### Field Mapping with LLM
+
+The LLM is used to map fields from the input catalog to the standardized schema. For example, if the input catalog has a column named "Item Number", the LLM can recognize that this corresponds to the "SKU" field in the standardized schema.
+
+The field mapping process works as follows:
+
+1. The LLM analyzes the column names and sample data from the input catalog.
+2. It compares the column names and data to the standardized schema fields.
+3. It assigns a confidence score to each potential mapping.
+4. The mappings with the highest confidence scores are used to transform the data.
+
+### Text Analysis
+
+The LLM is also used for text analysis, particularly for extracting information from product descriptions. For example:
+
+1. **Category Extraction**: The LLM can analyze a product description and determine the appropriate category and category group.
+2. **Feature Extraction**: The LLM can identify key features and specifications from the description.
+3. **Normalization**: The LLM can normalize text fields to ensure consistency.
+
+## Output Format
+
+The standardized output includes the following columns in this specific order:
+
+1. **SKU** (required) - Stock Keeping Unit
+2. **Short Description** (required) - Brief product description
+3. **Long Description** - Detailed product description
+4. **Model** - Product model number
+5. **Category Group** - Higher-level product category
+6. **Category** - Specific product category
+7. **Manufacturer** (required) - Company that manufactures the product
+8. **Manufacturer SKU** - Manufacturer's own product identifier
+9. **Image URL** - Link to product image
+10. **Document Name** - Name of associated document
+11. **Document URL** - Link to associated document
+12. **Unit Of Measure** - How the product is measured/sold
+13. **Buy Cost** - Wholesale/purchase cost
+14. **Trade Price** (required) - Price for trade customers
+15. **MSRP GBP** - Manufacturer's Suggested Retail Price in British Pounds
+16. **MSRP USD** - Manufacturer's Suggested Retail Price in US Dollars
+17. **MSRP EUR** - Manufacturer's Suggested Retail Price in Euros
+18. **Discontinued** - Whether the product is discontinued

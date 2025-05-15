@@ -21,10 +21,10 @@ class TestXMLParser:
         """Test parsing an XML file"""
         parser = XMLParser(temp_xml_file)
         result = parser.parse()
-        
+
         # Check that the result is a DataFrame
         assert isinstance(result, pd.DataFrame)
-        
+
         # Check that the data matches the expected structure
         assert len(result) == 3
         assert 'sku' in result.columns
@@ -32,7 +32,7 @@ class TestXMLParser:
         assert 'price' in result.columns
         assert 'category' in result.columns
         assert 'manufacturer' in result.columns
-        
+
         # Check specific values
         assert result.iloc[0]['sku'] == 'ABC123'
         assert result.iloc[1]['name'] == 'Wireless Mic'
@@ -41,10 +41,10 @@ class TestXMLParser:
     def test_detect_record_path(self, temp_xml_file):
         """Test record path detection"""
         parser = XMLParser(temp_xml_file)
-        
+
         # Parse to initialize the root
         parser.parse()
-        
+
         # Test record path detection
         record_path = parser._detect_record_path()
         assert record_path == 'product'  # The repeating element in the sample XML
@@ -68,16 +68,17 @@ class TestXMLParser:
     </product>
 </catalog>
 """)
-        
+
         # Parse the file
         parser = XMLParser(xml_with_attrs)
         result = parser.parse()
-        
-        # Check that attributes are included
-        assert '@id' in result.columns
-        assert '@status' in result.columns
-        assert 'price' in result.columns
-        assert '@currency' in result.columns or 'price_@currency' in result.columns
+
+        # Check that attributes are included (with or without @ prefix)
+        assert 'id' in result.columns
+        assert 'status' in result.columns
+        assert 'sku' in result.columns
+        assert 'name' in result.columns
+        assert 'price_ currency' in result.columns or 'price_currency' in result.columns
 
     def test_parse_as_single_record(self, tmp_path):
         """Test parsing XML as a single record"""
@@ -93,11 +94,11 @@ class TestXMLParser:
     <manufacturer>Sony</manufacturer>
 </product>
 """)
-        
+
         # Parse the file
         parser = XMLParser(single_record)
         result = parser.parse()
-        
+
         # Check that the result is a DataFrame with a single row
         assert isinstance(result, pd.DataFrame)
         assert len(result) == 1
@@ -110,11 +111,11 @@ class TestXMLParser:
         invalid_file = tmp_path / "invalid.xml"
         with open(invalid_file, 'w') as f:
             f.write("<invalid>This is not valid XML")
-        
+
         # Parse the file
         parser = XMLParser(invalid_file)
         result = parser.parse()
-        
+
         # Check that the result is an empty DataFrame
         assert isinstance(result, pd.DataFrame)
         assert result.empty

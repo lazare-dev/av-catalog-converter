@@ -80,6 +80,7 @@ class TestImports:
         assert hasattr(instance, 'rate_limiter')
         assert hasattr(instance, 'cache')
 
+
     def test_gpt_client_imports(self):
         """Test importing the GPTClient"""
         # Import the class
@@ -109,9 +110,10 @@ class TestImports:
         # Check that the class has the new attributes
         assert hasattr(LLMFactory, '_init_time')
 
-        # Check that the CLIENT_MAP includes both Phi and GPT-2
-        assert "phi" in LLMFactory.CLIENT_MAP
+        # Check that the CLIENT_MAP includes GPT-2, DistilBERT, and PHI
         assert "gpt2" in LLMFactory.CLIENT_MAP
+        assert "distilbert" in LLMFactory.CLIENT_MAP
+        assert "phi" in LLMFactory.CLIENT_MAP
 
     def test_csv_parser_imports(self):
         """Test importing the CSVParser"""

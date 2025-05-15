@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Catalog Converter Test Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .summary-box {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            width: 30%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .summary-box h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .success-rate {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .high {
+            color: #27ae60;
+        }
+        .medium {
+            color: #f39c12;
+        }
+        .low {
+            color: #e74c3c;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .passed {
+            color: #27ae60;
+        }
+        .failed {
+            color: #e74c3c;
+        }
+        .error {
+            color: #c0392b;
+        }
+        .skipped {
+            color: #7f8c8d;
+        }
+        .details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #ddd;
+            padding: 10px;
+            margin-top: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .error-details {
+            border-left-color: #e74c3c;
+        }
+        .timestamp {
+            color: #7f8c8d;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+        .no-results {
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AV Catalog Converter Test Report</h1>
+    <p class="timestamp">Generated on 2025-05-13 20:55:41</p>
+
+    <div class="summary">
+
+        <div class="summary-box">
+            <h3>Backend Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+
+        <div class="summary-box">
+            <h3>Frontend Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+
+        <div class="summary-box">
+            <h3>Integration Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+    </div>
+
+    <h2>Backend Test Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>tests.integration.test_api</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ImportError while importing test module '/Users/andrewlazare/Projects/av-catalog-converter/tests/integration/test_api.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/integration/test_api.py:11: in <module>
+    from app import app
+app.py:19: in <module>
+    from core.file_parser.parser_factory import ParserFactory
+core/file_parser/parser_factory.py:16: in <module>
+    from core.file_parser.pdf_parser import PDFParser
+core/file_parser/pdf_parser.py:10: in <module>
+    import pytesseract
+E   ModuleNotFoundError: No module named 'pytesseract'
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.integration.test_api_with_optimizations</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ImportError while importing test module '/Users/andrewlazare/Projects/av-catalog-converter/tests/integration/test_api_with_optimizations.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/integration/test_api_with_optimizations.py:10: in <module>
+    from app import app
+app.py:19: in <module>
+    from core.file_parser.parser_factory import ParserFactory
+core/file_parser/parser_factory.py:16: in <module>
+    from core.file_parser.pdf_parser import PDFParser
+core/file_parser/pdf_parser.py:10: in <module>
+    import pytesseract
+E   ModuleNotFoundError: No module named 'pytesseract'
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.integration.test_end_to_end</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ImportError while importing test module '/Users/andrewlazare/Projects/av-catalog-converter/tests/integration/test_end_to_end.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/integration/test_end_to_end.py:9: in <module>
+    from app import process_file
+app.py:19: in <module>
+    from core.file_parser.parser_factory import ParserFactory
+core/file_parser/parser_factory.py:16: in <module>
+    from core.file_parser.pdf_parser import PDFParser
+core/file_parser/pdf_parser.py:10: in <module>
+    import pytesseract
+E   ModuleNotFoundError: No module named 'pytesseract'
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.integration.test_optimized_components</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1076: in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1050: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1027: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1006: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:688: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:883: in exec_module
+    ???
+<frozen importlib._bootstrap>:241: in _call_with_frames_removed
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/__init__.py:63: in <module>
+    from .document_question_answering import DocumentQuestionAnsweringPipeline
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/document_question_answering.py:29: in <module>
+    from .question_answering import select_starts_ends
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/question_answering.py:8: in <module>
+    from ..data import SquadExample, SquadFeatures, squad_convert_examples_to_features
+../../anaconda3/lib/python3.10/site-packages/transformers/data/__init__.py:30: in <module>
+    from .metrics import glue_compute_metrics, xnli_compute_metrics
+../../anaconda3/lib/python3.10/site-packages/transformers/data/metrics/__init__.py:22: in <module>
+    if is_sklearn_available():
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:528: in is_sklearn_available
+    return is_scipy_available() and importlib.util.find_spec("sklearn.metrics")
+../../anaconda3/lib/python3.10/importlib/util.py:94: in find_spec
+    parent = __import__(parent_name, fromlist=['__path__'])
+../../anaconda3/lib/python3.10/site-packages/sklearn/__init__.py:82: in <module>
+    from .base import clone
+../../anaconda3/lib/python3.10/site-packages/sklearn/base.py:17: in <module>
+    from .utils import _IS_32BIT
+../../anaconda3/lib/python3.10/site-packages/sklearn/utils/__init__.py:19: in <module>
+    from .murmurhash import murmurhash3_32
+sklearn/utils/murmurhash.pyx:1: in init sklearn.utils.murmurhash
+    ???
+E   ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_optimized_components.py:14: in <module>
+    from core.llm.distilbert_client import DistilBERTClient
+core/llm/distilbert_client.py:23: in <module>
+    from transformers import pipeline
+<frozen importlib._bootstrap>:1075: in _handle_fromlist
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1066: in __getattr__
+    module = self._get_module(self._class_to_module[name])
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1078: in _get_module
+    raise RuntimeError(
+E   RuntimeError: Failed to import transformers.pipelines because of the following error (look up to see its traceback):
+E   numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.unit.core.file_parser.test_parser_factory</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ImportError while importing test module '/Users/andrewlazare/Projects/av-catalog-converter/tests/unit/core/file_parser/test_parser_factory.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit/core/file_parser/test_parser_factory.py:8: in <module>
+    from core.file_parser.parser_factory import ParserFactory
+core/file_parser/parser_factory.py:16: in <module>
+    from core.file_parser.pdf_parser import PDFParser
+core/file_parser/pdf_parser.py:10: in <module>
+    import pytesseract
+E   ModuleNotFoundError: No module named 'pytesseract'
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.unit.core.llm.test_distilbert_client</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1076: in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1050: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1027: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1006: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:688: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:883: in exec_module
+    ???
+<frozen importlib._bootstrap>:241: in _call_with_frames_removed
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/__init__.py:63: in <module>
+    from .document_question_answering import DocumentQuestionAnsweringPipeline
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/document_question_answering.py:29: in <module>
+    from .question_answering import select_starts_ends
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/question_answering.py:8: in <module>
+    from ..data import SquadExample, SquadFeatures, squad_convert_examples_to_features
+../../anaconda3/lib/python3.10/site-packages/transformers/data/__init__.py:30: in <module>
+    from .metrics import glue_compute_metrics, xnli_compute_metrics
+../../anaconda3/lib/python3.10/site-packages/transformers/data/metrics/__init__.py:22: in <module>
+    if is_sklearn_available():
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:528: in is_sklearn_available
+    return is_scipy_available() and importlib.util.find_spec("sklearn.metrics")
+../../anaconda3/lib/python3.10/importlib/util.py:94: in find_spec
+    parent = __import__(parent_name, fromlist=['__path__'])
+../../anaconda3/lib/python3.10/site-packages/sklearn/__init__.py:82: in <module>
+    from .base import clone
+../../anaconda3/lib/python3.10/site-packages/sklearn/base.py:17: in <module>
+    from .utils import _IS_32BIT
+../../anaconda3/lib/python3.10/site-packages/sklearn/utils/__init__.py:19: in <module>
+    from .murmurhash import murmurhash3_32
+sklearn/utils/murmurhash.pyx:1: in init sklearn.utils.murmurhash
+    ???
+E   ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+
+The above exception was the direct cause of the following exception:
+tests/unit/core/llm/test_distilbert_client.py:8: in <module>
+    from core.llm.distilbert_client import DistilBERTClient
+core/llm/distilbert_client.py:23: in <module>
+    from transformers import pipeline
+<frozen importlib._bootstrap>:1075: in _handle_fromlist
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1066: in __getattr__
+    module = self._get_module(self._class_to_module[name])
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1078: in _get_module
+    raise RuntimeError(
+E   RuntimeError: Failed to import transformers.pipelines because of the following error (look up to see its traceback):
+E   numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.unit.core.llm.test_llm_factory</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1076: in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1050: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1027: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1006: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:688: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:883: in exec_module
+    ???
+<frozen importlib._bootstrap>:241: in _call_with_frames_removed
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/__init__.py:63: in <module>
+    from .document_question_answering import DocumentQuestionAnsweringPipeline
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/document_question_answering.py:29: in <module>
+    from .question_answering import select_starts_ends
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/question_answering.py:8: in <module>
+    from ..data import SquadExample, SquadFeatures, squad_convert_examples_to_features
+../../anaconda3/lib/python3.10/site-packages/transformers/data/__init__.py:30: in <module>
+    from .metrics import glue_compute_metrics, xnli_compute_metrics
+../../anaconda3/lib/python3.10/site-packages/transformers/data/metrics/__init__.py:22: in <module>
+    if is_sklearn_available():
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:528: in is_sklearn_available
+    return is_scipy_available() and importlib.util.find_spec("sklearn.metrics")
+../../anaconda3/lib/python3.10/importlib/util.py:94: in find_spec
+    parent = __import__(parent_name, fromlist=['__path__'])
+../../anaconda3/lib/python3.10/site-packages/sklearn/__init__.py:82: in <module>
+    from .base import clone
+../../anaconda3/lib/python3.10/site-packages/sklearn/base.py:17: in <module>
+    from .utils import _IS_32BIT
+../../anaconda3/lib/python3.10/site-packages/sklearn/utils/__init__.py:19: in <module>
+    from .murmurhash import murmurhash3_32
+sklearn/utils/murmurhash.pyx:1: in init sklearn.utils.murmurhash
+    ???
+E   ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+
+The above exception was the direct cause of the following exception:
+tests/unit/core/llm/test_llm_factory.py:7: in <module>
+    from core.llm.llm_factory import LLMFactory
+core/llm/llm_factory.py:15: in <module>
+    from core.llm.distilbert_client import DistilBERTClient
+core/llm/distilbert_client.py:23: in <module>
+    from transformers import pipeline
+<frozen importlib._bootstrap>:1075: in _handle_fromlist
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1066: in __getattr__
+    module = self._get_module(self._class_to_module[name])
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1078: in _get_module
+    raise RuntimeError(
+E   RuntimeError: Failed to import transformers.pipelines because of the following error (look up to see its traceback):
+E   numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.unit.services.mapping.test_field_mapper</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1076: in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1050: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1027: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1006: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:688: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:883: in exec_module
+    ???
+<frozen importlib._bootstrap>:241: in _call_with_frames_removed
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/__init__.py:63: in <module>
+    from .document_question_answering import DocumentQuestionAnsweringPipeline
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/document_question_answering.py:29: in <module>
+    from .question_answering import select_starts_ends
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/question_answering.py:8: in <module>
+    from ..data import SquadExample, SquadFeatures, squad_convert_examples_to_features
+../../anaconda3/lib/python3.10/site-packages/transformers/data/__init__.py:30: in <module>
+    from .metrics import glue_compute_metrics, xnli_compute_metrics
+../../anaconda3/lib/python3.10/site-packages/transformers/data/metrics/__init__.py:22: in <module>
+    if is_sklearn_available():
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:528: in is_sklearn_available
+    return is_scipy_available() and importlib.util.find_spec("sklearn.metrics")
+../../anaconda3/lib/python3.10/importlib/util.py:94: in find_spec
+    parent = __import__(parent_name, fromlist=['__path__'])
+../../anaconda3/lib/python3.10/site-packages/sklearn/__init__.py:82: in <module>
+    from .base import clone
+../../anaconda3/lib/python3.10/site-packages/sklearn/base.py:17: in <module>
+    from .utils import _IS_32BIT
+../../anaconda3/lib/python3.10/site-packages/sklearn/utils/__init__.py:19: in <module>
+    from .murmurhash import murmurhash3_32
+sklearn/utils/murmurhash.pyx:1: in init sklearn.utils.murmurhash
+    ???
+E   ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+
+The above exception was the direct cause of the following exception:
+tests/unit/services/mapping/test_field_mapper.py:8: in <module>
+    from services.mapping.field_mapper import FieldMapper
+services/mapping/__init__.py:7: in <module>
+    from services.mapping.field_mapper import FieldMapper
+services/mapping/field_mapper.py:12: in <module>
+    from core.llm.llm_factory import LLMFactory
+core/llm/llm_factory.py:15: in <module>
+    from core.llm.distilbert_client import DistilBERTClient
+core/llm/distilbert_client.py:23: in <module>
+    from transformers import pipeline
+<frozen importlib._bootstrap>:1075: in _handle_fromlist
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1066: in __getattr__
+    module = self._get_module(self._class_to_module[name])
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1078: in _get_module
+    raise RuntimeError(
+E   RuntimeError: Failed to import transformers.pipelines because of the following error (look up to see its traceback):
+E   numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.unit.services.mapping.test_field_mapper_simple</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1076: in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1050: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1027: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1006: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:688: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:883: in exec_module
+    ???
+<frozen importlib._bootstrap>:241: in _call_with_frames_removed
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/__init__.py:63: in <module>
+    from .document_question_answering import DocumentQuestionAnsweringPipeline
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/document_question_answering.py:29: in <module>
+    from .question_answering import select_starts_ends
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/question_answering.py:8: in <module>
+    from ..data import SquadExample, SquadFeatures, squad_convert_examples_to_features
+../../anaconda3/lib/python3.10/site-packages/transformers/data/__init__.py:30: in <module>
+    from .metrics import glue_compute_metrics, xnli_compute_metrics
+../../anaconda3/lib/python3.10/site-packages/transformers/data/metrics/__init__.py:22: in <module>
+    if is_sklearn_available():
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:528: in is_sklearn_available
+    return is_scipy_available() and importlib.util.find_spec("sklearn.metrics")
+../../anaconda3/lib/python3.10/importlib/util.py:94: in find_spec
+    parent = __import__(parent_name, fromlist=['__path__'])
+../../anaconda3/lib/python3.10/site-packages/sklearn/__init__.py:82: in <module>
+    from .base import clone
+../../anaconda3/lib/python3.10/site-packages/sklearn/base.py:17: in <module>
+    from .utils import _IS_32BIT
+../../anaconda3/lib/python3.10/site-packages/sklearn/utils/__init__.py:19: in <module>
+    from .murmurhash import murmurhash3_32
+sklearn/utils/murmurhash.pyx:1: in init sklearn.utils.murmurhash
+    ???
+E   ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+
+The above exception was the direct cause of the following exception:
+tests/unit/services/mapping/test_field_mapper_simple.py:8: in <module>
+    from services.mapping.field_mapper import FieldMapper
+services/mapping/__init__.py:7: in <module>
+    from services.mapping.field_mapper import FieldMapper
+services/mapping/field_mapper.py:12: in <module>
+    from core.llm.llm_factory import LLMFactory
+core/llm/llm_factory.py:15: in <module>
+    from core.llm.distilbert_client import DistilBERTClient
+core/llm/distilbert_client.py:23: in <module>
+    from transformers import pipeline
+<frozen importlib._bootstrap>:1075: in _handle_fromlist
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1066: in __getattr__
+    module = self._get_module(self._class_to_module[name])
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1078: in _get_module
+    raise RuntimeError(
+E   RuntimeError: Failed to import transformers.pipelines because of the following error (look up to see its traceback):
+E   numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.unit.services.structure.test_structure_analyzer</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1076: in _get_module
+    return importlib.import_module("." + module_name, self.__name__)
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1050: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1027: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1006: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:688: in _load_unlocked
+    ???
+<frozen importlib._bootstrap_external>:883: in exec_module
+    ???
+<frozen importlib._bootstrap>:241: in _call_with_frames_removed
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/__init__.py:63: in <module>
+    from .document_question_answering import DocumentQuestionAnsweringPipeline
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/document_question_answering.py:29: in <module>
+    from .question_answering import select_starts_ends
+../../anaconda3/lib/python3.10/site-packages/transformers/pipelines/question_answering.py:8: in <module>
+    from ..data import SquadExample, SquadFeatures, squad_convert_examples_to_features
+../../anaconda3/lib/python3.10/site-packages/transformers/data/__init__.py:30: in <module>
+    from .metrics import glue_compute_metrics, xnli_compute_metrics
+../../anaconda3/lib/python3.10/site-packages/transformers/data/metrics/__init__.py:22: in <module>
+    if is_sklearn_available():
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:528: in is_sklearn_available
+    return is_scipy_available() and importlib.util.find_spec("sklearn.metrics")
+../../anaconda3/lib/python3.10/importlib/util.py:94: in find_spec
+    parent = __import__(parent_name, fromlist=['__path__'])
+../../anaconda3/lib/python3.10/site-packages/sklearn/__init__.py:82: in <module>
+    from .base import clone
+../../anaconda3/lib/python3.10/site-packages/sklearn/base.py:17: in <module>
+    from .utils import _IS_32BIT
+../../anaconda3/lib/python3.10/site-packages/sklearn/utils/__init__.py:19: in <module>
+    from .murmurhash import murmurhash3_32
+sklearn/utils/murmurhash.pyx:1: in init sklearn.utils.murmurhash
+    ???
+E   ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+
+The above exception was the direct cause of the following exception:
+tests/unit/services/structure/test_structure_analyzer.py:8: in <module>
+    from services.structure.structure_analyzer import StructureAnalyzer
+services/structure/structure_analyzer.py:14: in <module>
+    from core.llm.llm_factory import LLMFactory
+core/llm/llm_factory.py:15: in <module>
+    from core.llm.distilbert_client import DistilBERTClient
+core/llm/distilbert_client.py:23: in <module>
+    from transformers import pipeline
+<frozen importlib._bootstrap>:1075: in _handle_fromlist
+    ???
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1066: in __getattr__
+    module = self._get_module(self._class_to_module[name])
+../../anaconda3/lib/python3.10/site-packages/transformers/utils/import_utils.py:1078: in _get_module
+    raise RuntimeError(
+E   RuntimeError: Failed to import transformers.pipelines because of the following error (look up to see its traceback):
+E   numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>tests.unit.web.api.test_logging_controller</td>
+                <td></td>
+                <td class="error">ERROR</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> collection failure
+                        ImportError while importing test module '/Users/andrewlazare/Projects/av-catalog-converter/tests/unit/web/api/test_logging_controller.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../anaconda3/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit/web/api/test_logging_controller.py:8: in <module>
+    from web.api.logging_controller import logging_api, receive_logs
+web/api/__init__.py:10: in <module>
+    from web.routes import *
+web/routes.py:16: in <module>
+    from core.file_parser.parser_factory import ParserFactory
+core/file_parser/parser_factory.py:16: in <module>
+    from core.file_parser.pdf_parser import PDFParser
+core/file_parser/pdf_parser.py:10: in <module>
+    import pytesseract
+E   ModuleNotFoundError: No module named 'pytesseract'
+                    </div>
+                </td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <h2>Frontend Test Details</h2>
+
+    <p class="no-results">No frontend test details available</p>
+
+    <h2>Integration Test Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>test_health_check_with_llm_stats</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>0.235</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+</body>
+</html>

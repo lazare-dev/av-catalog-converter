@@ -25,19 +25,20 @@ APP_CONFIG = {
     "cache_ttl": 86400,  # 24 hours in seconds
 }
 
-# LLM configuration - using a smaller model for better compatibility
+# LLM configuration - using DistilBERT for better performance and accuracy
 MODEL_CONFIG = {
-    "model_id": "gpt2",          # Use a small GPT-2 model that's compatible with AutoModelForCausalLM
-    "model_type": "gpt2",        # Explicitly set model type to ensure correct handling
-    "max_new_tokens": 128,       # smaller for faster responses
-    "temperature": 0.1,          # lower for deterministic outputs
-    "top_p": 0.9,                # nucleus sampling threshold
-    "repetition_penalty": 1.0,   # prevent repetitive outputs
-    "max_input_length": 512,     # maximum input length in tokens
+    "model_id": "distilbert-base-uncased",  # Use DistilBERT model for better performance
+    "model_type": "distilbert",             # Explicitly set model type to ensure correct handling
+    "max_new_tokens": 128,                  # Control response length
+    "temperature": 0.1,                     # Lower for deterministic outputs
+    "top_p": 0.9,                           # Nucleus sampling threshold
+    "repetition_penalty": 1.0,              # Prevent repetitive outputs
+    "max_input_length": 512,                # Maximum input length in tokens
 
     # Memory optimization
-    "low_cpu_mem_usage": True,   # optimize memory usage during loading
-    "device_map": "cpu",         # force CPU for better compatibility
+    "low_cpu_mem_usage": True,              # Optimize memory usage during loading
+    "device_map": "auto",                   # Auto-detect best device (CPU/GPU)
+    "quantization": "8bit",                 # Use 8-bit quantization if available
 
     # Caching configuration
     "cache_enabled": True,       # speed benefit from caching
@@ -48,7 +49,8 @@ MODEL_CONFIG = {
     # Rate limiting configuration
     "rate_limiting_enabled": True,  # prevent overloading LLM
     "requests_per_minute": 60,      # maximum requests per minute
-    "burst_size": 1000             # maximum burst size for large prompts
+    "burst_size": 3000,            # increased burst size for large prompts
+    "fallback_on_rate_limit": True  # enable fallback mechanisms when rate limited
 }
 
 # File parsing settings

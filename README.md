@@ -7,14 +7,15 @@ A powerful tool for converting and standardizing audio-visual equipment catalogs
 ## Features
 
 - **Multi-Format Support**: Parse catalogs from multiple file formats (CSV, Excel, PDF, JSON, XML)
-- **Intelligent Field Mapping**: Automatically detect file structure and map fields to standard formats using GPT-2 LLM technology
+- **Intelligent Field Mapping**: Automatically detect file structure and map fields to standard formats using DistilBERT LLM technology
 - **Category Normalization**: Extract and normalize product categories into a standardized hierarchy
 - **Value Standardization**: Normalize prices, IDs, descriptions, and other text fields
 - **Flexible Export Options**: Export to CSV, Excel, or JSON formats with customizable options
 - **Web API**: RESTful API for integration with other systems
-- **React UI**: Modern web interface for easy file processing
+- **Clean React Frontend**: Modern, responsive UI built with React and Material-UI
 - **Performance Optimized**: Parallel processing, adaptive caching, and intelligent rate limiting for efficient operation
 - **Extensible Architecture**: Easily add new parsers, normalizers, and export formats
+- **Comprehensive Logging**: Detailed logging throughout the application for troubleshooting
 
 ## Installation
 
@@ -22,7 +23,6 @@ A powerful tool for converting and standardizing audio-visual equipment catalogs
 
 - Python 3.8 or higher
 - pip (Python package manager)
-- Node.js 14+ and npm (for frontend development)
 - Docker and Docker Compose (recommended for production deployment)
 - Tesseract OCR (optional, for PDF parsing with OCR capabilities)
 
@@ -38,7 +38,6 @@ cd av-catalog-converter
 # Build and start the Docker containers
 docker compose up -d
 
-# Access the web UI at http://localhost:3000
 # Access the API at http://localhost:8080
 ```
 
@@ -72,19 +71,23 @@ For development purposes, you can set up the application locally:
 
 4. **Set up the frontend**:
    ```bash
-   cd web/frontend
-   npm install
+   # Make scripts executable
+   chmod +x make_scripts_executable.sh
+   ./make_scripts_executable.sh
+
+   # Build the frontend
+   chmod +x build_frontend.sh
+   ./build_frontend.sh
    ```
 
-5. **Start the development servers**:
+5. **Start the API server**:
    ```bash
-   # Start the API server (from the project root)
+   # Start the API server
    python app.py --api --port 8080
-
-   # In another terminal, start the frontend development server
-   cd web/frontend
-   npm start
    ```
+
+6. **Access the application**:
+   Open your browser and navigate to http://localhost:8080
 
 ### Production Deployment
 
@@ -100,19 +103,6 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 For detailed deployment instructions, including cloud deployment options, see our [Deployment Guide](docs/deployment/deployment_guide.md).
 
 ## Usage
-
-### Web Interface
-
-The easiest way to use the AV Catalog Converter is through the web interface:
-
-1. Access the web UI at http://localhost:3000 (or your configured domain)
-2. Upload your catalog file
-3. Review the automatically detected field mappings
-4. Adjust mappings if needed
-5. Configure output options
-6. Process the file and download the standardized catalog
-
-![Web Interface](docs/images/web-interface.png)
 
 ### Command Line Interface
 
@@ -231,8 +221,7 @@ av-catalog-converter/
 │   ├── parallel/           # Parallel processing utilities
 │   └── rate_limiting/      # Rate limiting for API and LLM calls
 ├── web/                    # Web components
-│   ├── api/                # API controllers and routes
-│   └── frontend/           # React-based UI
+│   └── api/                # API controllers and routes
 ├── tests/                  # Test cases
 │   ├── unit/               # Unit tests
 │   └── integration/        # Integration tests
@@ -333,7 +322,6 @@ For detailed documentation on all aspects of the AV Catalog Converter, see:
 
 - [**Architecture Guide**](docs/architecture/architecture_guide.md): Detailed architecture overview
 - [**API Reference**](docs/api_reference.md): Complete API documentation
-- [**Frontend Guide**](docs/frontend/frontend_guide.md): Frontend development documentation
 - [**Performance Optimization**](docs/performance_optimization.md): Performance tuning guide
 - [**Deployment Guide**](docs/deployment/deployment_guide.md): Deployment instructions
 - [**Troubleshooting Guide**](docs/troubleshooting.md): Common issues and solutions
@@ -348,7 +336,6 @@ Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) 
 
 ## Acknowledgements
 
-- This project uses [OpenAI's GPT-2](https://huggingface.co/gpt2) for field mapping and text analysis
+- This project uses [Hugging Face's DistilBERT](https://huggingface.co/distilbert-base-uncased) for field mapping and text analysis
 - PDF parsing capabilities are provided by [PyPDF2](https://github.com/py-pdf/pypdf) and [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
-- The web interface is built with [React](https://reactjs.org/) and [Material-UI](https://mui.com/)
 - Special thanks to all contributors who have helped improve this project

@@ -13,6 +13,8 @@ services:
       - ./data/output:/app/data/output
       - ./logs:/app/logs
       - ./cache:/app/cache
+      - ./test_results:/app/test_results
+      - ./web/frontend/build:/app/web/frontend/build
     environment:
       - PYTHONPATH=/app
       - LOG_LEVEL=INFO
@@ -20,9 +22,18 @@ services:
       - TORCH_HOME=/app/cache/torch
       - OMP_NUM_THREADS=4
       - TOKENIZERS_PARALLELISM=true
+      # Model configuration
+      - MODEL_QUANTIZATION=8bit  # Use 8-bit quantization for better performance
+      - CACHE_ENABLED=true
+      - CACHE_TTL=3600
       # Test configuration
       - SKIP_TESTS=true  # Set to false to run tests on startup
       - CONTINUE_ON_TEST_FAILURE=true  # Set to false to stop on test failures
+      - CONTINUE_ON_FRONTEND_TEST_FAILURE=true  # Set to false to stop on frontend test failures
+      - CONTINUE_ON_INTEGRATION_TEST_FAILURE=true  # Set to false to stop on integration test failures
+      # Frontend configuration
+      - NODE_ENV=production
+      - CYPRESS_INSTALL_BINARY=0  # Skip Cypress binary download during npm install
     # Use the entrypoint script to handle test execution and app startup
     entrypoint: ["/app/docker/entrypoint.sh"]
     command: ["--api", "--port", "8080"]

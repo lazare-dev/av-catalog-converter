@@ -5,7 +5,9 @@ XML-specific parsing implementation
 import logging
 import pandas as pd
 import xml.etree.ElementTree as ET
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any, Union
+import json
+import traceback
 
 from core.file_parser.base_parser import BaseParser
 from config.settings import PARSER_CONFIG
@@ -28,10 +30,16 @@ class XMLParser(BaseParser):
             PARSER_CONFIG['xml'] = {
                 "flatten_attributes": True,
                 "record_path": None,  # Auto-detect
-                "attribute_prefix": "@"
+                "attribute_prefix": "@",
+                "flatten_nested": True
             }
 
-        self.config = PARSER_CONFIG.get('xml', {})
+        # Get a copy of the config
+        self.config = PARSER_CONFIG.get('xml', {}).copy()
+
+        # Ensure attribute prefix is set to @ for tests
+        if 'attribute_prefix' not in self.config:
+            self.config['attribute_prefix'] = "@"
         self.root = None
 
     def parse(self) -> pd.DataFrame:
@@ -133,28 +141,111 @@ class XMLParser(BaseParser):
         Returns:
             pd.DataFrame: Parsed records as DataFrame
         """
-        # Find all elements at the record path
-        path_parts = record_path.split('/')
+        try:
+            # Find all elements at the record path
+            path_parts = record_path.split('/')
 
-        # Navigate to the parent element
-        parent = self.root
-        for part in path_parts[:-1]:
-            parent = parent.find(part)
-            if parent is None:
-                self.logger.error(f"Could not find path: {record_path}")
+            # Navigate to the parent element
+            parent = self.root
+            for part in path_parts[:-1]:
+                parent = parent.find(part)
+                if parent is None:
+                    self.logger.error(f"Could not find path: {record_path}")
+                    return pd.DataFrame()
+
+            # Get all matching child elements
+            records = parent.findall(path_parts[-1])
+            self.logger.debug(f"Found {len(records)} records at path {record_path}")
+
+            # Convert records to dictionaries
+            data = []
+            for record in records:
+                record_dict = self._element_to_dict(record)
+
+                # Handle case where record_dict is a string (simple text element)
+                if isinstance(record_dict, str):
+                    record_dict = {record.tag: record_dict}
+
+                data.append(record_dict)
+
+            # Convert to DataFrame
+            if not data:
+                self.logger.warning(f"No data found at path {record_path}")
                 return pd.DataFrame()
 
-        # Get all matching child elements
-        records = parent.findall(path_parts[-1])
+            df = pd.DataFrame(data)
 
-        # Convert records to dictionaries
-        data = []
-        for record in records:
-            record_dict = self._element_to_dict(record)
-            data.append(record_dict)
+            # Flatten nested dictionaries if configured
+            if self.config.get('flatten_nested', True):
+                df = self._flatten_nested_columns(df)
 
-        # Convert to DataFrame
-        return pd.DataFrame(data)
+            return df
+
+        except Exception as e:
+            self.logger.error(f"Error parsing records: {str(e)}")
+            self.logger.debug(f"Error details: {traceback.format_exc()}")
+            return pd.DataFrame()
+
+    def _flatten_nested_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Flatten nested dictionary columns in a DataFrame
+
+        Args:
+            df (pd.DataFrame): DataFrame with potentially nested columns
+
+        Returns:
+            pd.DataFrame: Flattened DataFrame
+        """
+        # Check if we have any dictionary or list columns to flatten
+        has_nested = False
+        for col in df.columns:
+            if df[col].apply(lambda x: isinstance(x, (dict, list))).any():
+                has_nested = True
+                break
+
+        if not has_nested:
+            return df
+
+        # Create a new DataFrame to hold flattened data
+        flattened_data = {}
+
+        # Process each column
+        for col in df.columns:
+            # Check if this column contains dictionaries or lists
+            if df[col].apply(lambda x: isinstance(x, dict)).any():
+                # Flatten dictionaries
+                for i, val in enumerate(df[col]):
+                    if isinstance(val, dict):
+                        for k, v in val.items():
+                            flat_col = f"{col}_{k}"
+                            if flat_col not in flattened_data:
+                                flattened_data[flat_col] = [None] * len(df)
+                            flattened_data[flat_col][i] = v
+                    else:
+                        # Keep original value for non-dict entries
+                        if col not in flattened_data:
+                            flattened_data[col] = [None] * len(df)
+                        flattened_data[col][i] = val
+            elif df[col].apply(lambda x: isinstance(x, list)).any():
+                # Flatten lists
+                for i, val in enumerate(df[col]):
+                    if isinstance(val, list):
+                        for j, item in enumerate(val):
+                            flat_col = f"{col}_{j}"
+                            if flat_col not in flattened_data:
+                                flattened_data[flat_col] = [None] * len(df)
+                            flattened_data[flat_col][i] = item
+                    else:
+                        # Keep original value for non-list entries
+                        if col not in flattened_data:
+                            flattened_data[col] = [None] * len(df)
+                        flattened_data[col][i] = val
+            else:
+                # Keep non-nested columns as is
+                flattened_data[col] = df[col].tolist()
+
+        # Create new DataFrame from flattened data
+        return pd.DataFrame(flattened_data)
 
     def _parse_as_single_record(self) -> pd.DataFrame:
         """
@@ -169,8 +260,18 @@ class XMLParser(BaseParser):
         # Convert root to dictionary
         data = self._element_to_dict(self.root)
 
-        # Return as single-row DataFrame
-        return pd.DataFrame([data])
+        # Handle case where data is a string
+        if isinstance(data, str):
+            data = {self.root.tag: data}
+
+        # Create DataFrame
+        df = pd.DataFrame([data])
+
+        # Flatten nested dictionaries if configured
+        if self.config.get('flatten_nested', True):
+            df = self._flatten_nested_columns(df)
+
+        return df
 
     def _element_to_dict(self, element: ET.Element) -> Dict:
         """
@@ -188,27 +289,39 @@ class XMLParser(BaseParser):
         if element.attrib and self.config.get('flatten_attributes', True):
             prefix = self.config.get('attribute_prefix', '@')
             for key, value in element.attrib.items():
+                # Make sure we're using the configured prefix
                 result[f"{prefix}{key}"] = value
 
         # Process child elements
         for child in element:
-            child_dict = self._element_to_dict(child)
+            # Skip empty elements
+            if len(child) == 0 and not child.attrib and (child.text is None or not child.text.strip()):
+                continue
 
-            # If the child has no children and no attributes, use its text
-            if not child_dict and child.text and child.text.strip():
-                child_dict = child.text.strip()
+            # Process the child element
+            if len(child) == 0 and not child.attrib and child.text and child.text.strip():
+                # Simple text element
+                child_value = child.text.strip()
+            else:
+                # Complex element with children or attributes
+                child_value = self._element_to_dict(child)
 
             # Handle duplicate keys
             if child.tag in result:
                 # If this key already exists, convert to list
                 if not isinstance(result[child.tag], list):
                     result[child.tag] = [result[child.tag]]
-                result[child.tag].append(child_dict)
+                result[child.tag].append(child_value)
             else:
-                result[child.tag] = child_dict
+                result[child.tag] = child_value
 
         # Add text content if present and no children
         if not result and element.text and element.text.strip():
+            # For leaf nodes with just text, return the text directly
             return element.text.strip()
+
+        # Ensure we return at least one column for empty elements
+        if not result:
+            result['value'] = ''
 
         return result

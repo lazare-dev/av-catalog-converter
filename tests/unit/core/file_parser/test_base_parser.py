@@ -18,10 +18,10 @@ class TestBaseParser:
         test_file = tmp_path / "test.txt"
         with open(test_file, 'w') as f:
             f.write("Test content")
-        
+
         # Create a parser
         parser = BaseParser(test_file)
-        
+
         # Check that the file path is set correctly
         assert parser.file_path == Path(test_file)
         assert parser.encoding is None
@@ -34,10 +34,10 @@ class TestBaseParser:
         test_file = tmp_path / "test.txt"
         with open(test_file, 'w') as f:
             f.write("Test content")
-        
+
         # Create a parser
         parser = BaseParser(test_file)
-        
+
         # Check that parse() raises NotImplementedError
         with pytest.raises(NotImplementedError):
             parser.parse()
@@ -48,20 +48,20 @@ class TestBaseParser:
         test_file = tmp_path / "test.txt"
         with open(test_file, 'w') as f:
             f.write("Test content")
-        
+
         # Create a parser
         parser = BaseParser(test_file)
-        
+
         # Mock the parse() method to return a DataFrame
         sample_data = pd.DataFrame({
             'A': [1, 2, 3, 4, 5],
             'B': ['a', 'b', 'c', 'd', 'e']
         })
         monkeypatch.setattr(parser, 'parse', lambda: sample_data)
-        
+
         # Get a sample
         sample = parser.get_sample(3)
-        
+
         # Check that the sample is a DataFrame with 3 rows
         assert isinstance(sample, pd.DataFrame)
         assert len(sample) == 3
@@ -75,23 +75,28 @@ class TestBaseParser:
         test_file = tmp_path / "test.txt"
         with open(test_file, 'w') as f:
             f.write("Test content")
-        
+
         # Create a parser
         parser = BaseParser(test_file)
-        
+
         # Create a DataFrame with messy column names
+        # Note: Pandas silently drops duplicate column names, so we need to create the DataFrame differently
+        # First create with unique column names
         df = pd.DataFrame({
             'Product ID': [1, 2, 3],
             'Product Name!': ['a', 'b', 'c'],
             'Price ($)': [10, 20, 30],
             '': [1, 2, 3],  # Empty column name
             'Duplicate': [1, 2, 3],
-            'Duplicate': [4, 5, 6]  # Duplicate column name
+            'Duplicate_temp': [4, 5, 6]  # Will be renamed to create duplicate
         })
-        
+
+        # Then manually set the column names to include a duplicate
+        df.columns = ['Product ID', 'Product Name!', 'Price ($)', '', 'Duplicate', 'Duplicate']
+
         # Clean the column names
         result = parser.clean_column_names(df)
-        
+
         # Check that the column names are cleaned
         assert 'Product ID' in result.columns
         assert 'Product Name' in result.columns
@@ -106,10 +111,10 @@ class TestBaseParser:
         test_file = tmp_path / "test.txt"
         with open(test_file, 'w') as f:
             f.write("Test content")
-        
+
         # Create a parser
         parser = BaseParser(test_file)
-        
+
         # Create a DataFrame with various issues
         df = pd.DataFrame({
             'A': [1, 2, None, 'none', 'NULL'],
@@ -117,21 +122,21 @@ class TestBaseParser:
             'C': [None, None, None, None, None],  # Empty column
             'D': ['1', '2', '3', '4', '5']  # Numeric strings
         })
-        
+
         # Preprocess the DataFrame
         result = parser.preprocess_dataframe(df)
-        
+
         # Check that the DataFrame is preprocessed
         assert pd.isna(result.iloc[2]['A'])
         assert pd.isna(result.iloc[3]['A'])
         assert pd.isna(result.iloc[4]['A'])
-        
+
         assert pd.isna(result.iloc[2]['B'])
         assert pd.isna(result.iloc[3]['B'])
         assert pd.isna(result.iloc[4]['B'])
-        
+
         # Check that empty columns are removed
         assert 'C' not in result.columns
-        
+
         # Check that numeric strings are converted to numbers
         assert result['D'].dtype in [int, float, 'int64', 'float64']

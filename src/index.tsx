@@ -1,0 +1,20 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import { logger } from './services/logging';
+
+// Initialize logging
+logger.info('Application', 'Application starting');
+
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+// Log application loaded
+logger.info('Application', 'Application loaded successfully');

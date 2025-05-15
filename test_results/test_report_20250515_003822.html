@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Catalog Converter Test Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .summary-box {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            width: 30%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .summary-box h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .success-rate {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .high {
+            color: #27ae60;
+        }
+        .medium {
+            color: #f39c12;
+        }
+        .low {
+            color: #e74c3c;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .passed {
+            color: #27ae60;
+        }
+        .failed {
+            color: #e74c3c;
+        }
+        .error {
+            color: #c0392b;
+        }
+        .skipped {
+            color: #7f8c8d;
+        }
+        .details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #ddd;
+            padding: 10px;
+            margin-top: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .error-details {
+            border-left-color: #e74c3c;
+        }
+        .timestamp {
+            color: #7f8c8d;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+        .no-results {
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AV Catalog Converter Test Report</h1>
+    <p class="timestamp">Generated on 2025-05-15 00:38:22</p>
+
+    <div class="summary">
+
+        <div class="summary-box">
+            <h3>Backend Tests</h3>
+
+            <p>Total Tests: 165</p>
+            <p>Passed: 165</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 1</p>
+            <p>Success Rate: <span class="success-rate high">99.39%</span></p>
+
+        </div>
+
+        <div class="summary-box">
+            <h3>Frontend Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+
+        <div class="summary-box">
+            <h3>Integration Tests</h3>
+
+            <p>Total Tests: 1</p>
+            <p>Passed: 1</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate high">100.00%</span></p>
+
+        </div>
+    </div>
+
+    <h2>Backend Test Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>test_health_check</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>0.535</td>
+            </tr>
+
+            <tr>
+                <td>test_upload_file</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>10.214</td>
+            </tr>
+
+            <tr>
+                <td>test_upload_no_file</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>0.109</td>
+            </tr>
+
+            <tr>
+                <td>test_analyze_file</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>6.924</td>
+            </tr>
+
+            <tr>
+                <td>test_map_fields</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>0.659</td>
+            </tr>
+
+            <tr>
+                <td>test_health_check_with_llm_stats</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>0.116</td>
+            </tr>
+
+            <tr>
+                <td>test_upload_file_with_parallel_processing</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>0.339</td>
+            </tr>
+
+            <tr>
+                <td>test_analyze_file_with_optimized_components</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>6.611</td>
+            </tr>
+
+            <tr>
+                <td>test_map_fields_with_rate_limiting</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>4.483</td>
+            </tr>
+
+            <tr>
+                <td>test_process_csv_file</td>
+                <td>tests.integration.test_end_to_end.TestEndToEnd</td>
+                <td class="passed">PASSED</td>
+                <td>6.789</td>
+            </tr>
+
+            <tr>
+                <td>test_process_json_file</td>
+                <td>tests.integration.test_end_to_end.TestEndToEnd</td>
+                <td class="passed">PASSED</td>
+                <td>4.539</td>
+            </tr>
+
+            <tr>
+                <td>test_process_xml_file</td>
+                <td>tests.integration.test_end_to_end.TestEndToEnd</td>
+                <td class="passed">PASSED</td>
+                <td>4.606</td>
+            </tr>
+
+            <tr>
+                <td>test_process_nonexistent_file</td>
+                <td>tests.integration.test_end_to_end.TestEndToEnd</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+            <tr>
+                <td>test_process_invalid_file</td>
+                <td>tests.integration.test_end_to_end.TestEndToEnd</td>
+                <td class="passed">PASSED</td>
+                <td>5.552</td>
+            </tr>
+
+            <tr>
+                <td>test_csv_parser_with_parallel_processing</td>
+                <td>tests.integration.test_optimized_components.TestOptimizedComponents</td>
+                <td class="passed">PASSED</td>
+                <td>3.532</td>
+            </tr>
+
+            <tr>
+                <td>test_excel_parser_with_parallel_processing</td>
+                <td>tests.integration.test_optimized_components.TestOptimizedComponents</td>
+                <td class="passed">PASSED</td>
+                <td>2.277</td>
+            </tr>
+
+            <tr>
+                <td>test_distilbert_client_with_adaptive_cache</td>
+                <td>tests.integration.test_optimized_components.TestOptimizedComponents</td>
+                <td class="passed">PASSED</td>
+                <td>1.901</td>
+            </tr>
+
+            <tr>
+                <td>test_distilbert_client_with_rate_limiting</td>
+                <td>tests.integration.test_optimized_components.TestOptimizedComponents</td>
+                <td class="passed">PASSED</td>
+                <td>3.794</td>
+            </tr>
+
+            <tr>
+                <td>test_llm_factory_with_optimized_client</td>
+                <td>tests.integration.test_optimized_components.TestOptimizedComponents</td>
+                <td class="passed">PASSED</td>
+                <td>0.845</td>
+            </tr>
+
+            <tr>
+                <td>test_parallel_processor_with_large_dataframe</td>
+                <td>tests.integration.test_optimized_components.TestOptimizedComponents</td>
+                <td class="passed">PASSED</td>
+                <td>1.889</td>
+            </tr>
+
+            <tr>
+                <td>test_end_to_end_with_all_optimizations</td>
+                <td>tests.integration.test_optimized_components.TestOptimizedComponents</td>
+                <td class="passed">PASSED</td>
+                <td>8.675</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.core.file_parser.test_base_parser.TestBaseParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_not_implemented</td>
+                <td>tests.unit.core.file_parser.test_base_parser.TestBaseParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.435</td>
+            </tr>
+
+            <tr>
+                <td>test_get_sample</td>
+                <td>tests.unit.core.file_parser.test_base_parser.TestBaseParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.322</td>
+            </tr>
+
+            <tr>
+                <td>test_clean_column_names</td>
+                <td>tests.unit.core.file_parser.test_base_parser.TestBaseParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.876</td>
+            </tr>
+
+            <tr>
+                <td>test_preprocess_dataframe</td>
+                <td>tests.unit.core.file_parser.test_base_parser.TestBaseParser</td>
+                <td class="passed">PASSED</td>
+                <td>1.187</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.core.file_parser.test_csv_parser.TestCSVParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.225</td>
+            </tr>
+
+            <tr>
+                <td>test_parse</td>
+                <td>tests.unit.core.file_parser.test_csv_parser.TestCSVParser</td>
+                <td class="passed">PASSED</td>
+                <td>2.926</td>
+            </tr>
+
+            <tr>
+                <td>test_detect_delimiter</td>
+                <td>tests.unit.core.file_parser.test_csv_parser.TestCSVParser</td>
+                <td class="passed">PASSED</td>
+                <td>2.563</td>
+            </tr>
+
+            <tr>
+                <td>test_detect_header</td>
+                <td>tests.unit.core.file_parser.test_csv_parser.TestCSVParser</td>
+                <td class="passed">PASSED</td>
+                <td>2.346</td>
+            </tr>
+
+            <tr>
+                <td>test_get_sample</td>
+                <td>tests.unit.core.file_parser.test_csv_parser.TestCSVParser</td>
+                <td class="passed">PASSED</td>
+                <td>3.130</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_with_custom_delimiter</td>
+                <td>tests.unit.core.file_parser.test_csv_parser.TestCSVParser</td>
+                <td class="passed">PASSED</td>
+                <td>2.485</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_large_file_with_parallel_processing</td>
+                <td>tests.unit.core.file_parser.test_csv_parser_parallel.TestCSVParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>3.013</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_very_large_file_with_smaller_chunks</td>
+                <td>tests.unit.core.file_parser.test_csv_parser_parallel.TestCSVParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>2.957</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_small_file_without_parallel_processing</td>
+                <td>tests.unit.core.file_parser.test_csv_parser_parallel.TestCSVParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>3.010</td>
+            </tr>
+
+            <tr>
+                <td>test_integration_with_real_parallel_processing</td>
+                <td>tests.unit.core.file_parser.test_csv_parser_parallel.TestCSVParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>3.513</td>
+            </tr>
+
+            <tr>
+                <td>test_error_handling_during_parallel_processing</td>
+                <td>tests.unit.core.file_parser.test_csv_parser_parallel.TestCSVParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>2.754</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_large_file_with_parallel_processing</td>
+                <td>tests.unit.core.file_parser.test_excel_parser_parallel.TestExcelParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>1.693</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_very_large_file_with_sheet_partitioning</td>
+                <td>tests.unit.core.file_parser.test_excel_parser_parallel.TestExcelParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>1.395</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_small_file_without_parallel_processing</td>
+                <td>tests.unit.core.file_parser.test_excel_parser_parallel.TestExcelParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>1.252</td>
+            </tr>
+
+            <tr>
+                <td>test_can_partition_sheet</td>
+                <td>tests.unit.core.file_parser.test_excel_parser_parallel.TestExcelParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>0.244</td>
+            </tr>
+
+            <tr>
+                <td>test_estimate_row_count</td>
+                <td>tests.unit.core.file_parser.test_excel_parser_parallel.TestExcelParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>0.240</td>
+            </tr>
+
+            <tr>
+                <td>test_error_handling_during_parallel_processing</td>
+                <td>tests.unit.core.file_parser.test_excel_parser_parallel.TestExcelParserParallel</td>
+                <td class="passed">PASSED</td>
+                <td>1.762</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.core.file_parser.test_json_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.109</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_array</td>
+                <td>tests.unit.core.file_parser.test_json_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.114</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_object</td>
+                <td>tests.unit.core.file_parser.test_json_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.114</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_nested</td>
+                <td>tests.unit.core.file_parser.test_json_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.110</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_empty</td>
+                <td>tests.unit.core.file_parser.test_json_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.107</td>
+            </tr>
+
+            <tr>
+                <td>test_error_handling</td>
+                <td>tests.unit.core.file_parser.test_json_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.104</td>
+            </tr>
+
+            <tr>
+                <td>test_create_parser_csv</td>
+                <td>tests.unit.core.file_parser.test_parser_factory.TestParserFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.531</td>
+            </tr>
+
+            <tr>
+                <td>test_create_parser_json</td>
+                <td>tests.unit.core.file_parser.test_parser_factory.TestParserFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.424</td>
+            </tr>
+
+            <tr>
+                <td>test_create_parser_xml</td>
+                <td>tests.unit.core.file_parser.test_parser_factory.TestParserFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.424</td>
+            </tr>
+
+            <tr>
+                <td>test_file_not_found</td>
+                <td>tests.unit.core.file_parser.test_parser_factory.TestParserFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.112</td>
+            </tr>
+
+            <tr>
+                <td>test_fallback_detection</td>
+                <td>tests.unit.core.file_parser.test_parser_factory.TestParserFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.549</td>
+            </tr>
+
+            <tr>
+                <td>test_detect_parser_by_content</td>
+                <td>tests.unit.core.file_parser.test_parser_factory.TestParserFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.868</td>
+            </tr>
+
+            <tr>
+                <td>test_default_to_csv</td>
+                <td>tests.unit.core.file_parser.test_parser_factory.TestParserFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.728</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.core.file_parser.test_xml_parser.TestXMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.105</td>
+            </tr>
+
+            <tr>
+                <td>test_parse</td>
+                <td>tests.unit.core.file_parser.test_xml_parser.TestXMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+            <tr>
+                <td>test_detect_record_path</td>
+                <td>tests.unit.core.file_parser.test_xml_parser.TestXMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.114</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_with_attributes</td>
+                <td>tests.unit.core.file_parser.test_xml_parser.TestXMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.113</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_as_single_record</td>
+                <td>tests.unit.core.file_parser.test_xml_parser.TestXMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.128</td>
+            </tr>
+
+            <tr>
+                <td>test_error_handling</td>
+                <td>tests.unit.core.file_parser.test_xml_parser.TestXMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.107</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_adaptive_cache</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.314</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_standard_cache</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.319</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.325</td>
+            </tr>
+
+            <tr>
+                <td>test_init_without_rate_limiting</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.214</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_cache_hit</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.436</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.532</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting_exceeded</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.308</td>
+            </tr>
+
+            <tr>
+                <td>test_get_stats</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.313</td>
+            </tr>
+
+            <tr>
+                <td>test_batch_generate</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.321</td>
+            </tr>
+
+            <tr>
+                <td>test_process_masked_chunk</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.308</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_adaptive_cache</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.103</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_standard_cache</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.105</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.104</td>
+            </tr>
+
+            <tr>
+                <td>test_init_without_rate_limiting</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.103</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_cache_hit</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.106</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.106</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting_exceeded</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.107</td>
+            </tr>
+
+            <tr>
+                <td>test_get_stats_with_rate_limiter</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.110</td>
+            </tr>
+
+            <tr>
+                <td>test_batch_generate</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.113</td>
+            </tr>
+
+            <tr>
+                <td>test_get_model_type_explicit</td>
+                <td>tests.unit.core.llm.test_llm_factory.TestLLMFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_get_model_type_from_id</td>
+                <td>tests.unit.core.llm.test_llm_factory.TestLLMFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_get_model_type_default</td>
+                <td>tests.unit.core.llm.test_llm_factory.TestLLMFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_get_available_models</td>
+                <td>tests.unit.core.llm.test_llm_factory.TestLLMFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.services.mapping.test_field_mapper.TestFieldMapper</td>
+                <td class="passed">PASSED</td>
+                <td>0.835</td>
+            </tr>
+
+            <tr>
+                <td>test_map</td>
+                <td>tests.unit.services.mapping.test_field_mapper.TestFieldMapper</td>
+                <td class="passed">PASSED</td>
+                <td>3.147</td>
+            </tr>
+
+            <tr>
+                <td>test_map_fields</td>
+                <td>tests.unit.services.mapping.test_field_mapper.TestFieldMapper</td>
+                <td class="skipped">SKIPPED</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td>test_apply_mappings</td>
+                <td>tests.unit.services.mapping.test_field_mapper.TestFieldMapper</td>
+                <td class="passed">PASSED</td>
+                <td>0.436</td>
+            </tr>
+
+            <tr>
+                <td>test_handle_missing_required_fields</td>
+                <td>tests.unit.services.mapping.test_field_mapper.TestFieldMapper</td>
+                <td class="passed">PASSED</td>
+                <td>0.442</td>
+            </tr>
+
+            <tr>
+                <td>test_direct_mapping</td>
+                <td>tests.unit.services.mapping.test_field_mapper_simple.TestFieldMapperSimple</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_apply_mappings_dict</td>
+                <td>tests.unit.services.mapping.test_field_mapper_simple.TestFieldMapperSimple</td>
+                <td class="passed">PASSED</td>
+                <td>0.435</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.services.normalization.test_value_normalizer.TestValueNormalizer</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_normalize</td>
+                <td>tests.unit.services.normalization.test_value_normalizer.TestValueNormalizer</td>
+                <td class="passed">PASSED</td>
+                <td>0.016</td>
+            </tr>
+
+            <tr>
+                <td>test_normalize_prices</td>
+                <td>tests.unit.services.normalization.test_value_normalizer.TestValueNormalizer</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_normalize_text_fields</td>
+                <td>tests.unit.services.normalization.test_value_normalizer.TestValueNormalizer</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_normalize_ids</td>
+                <td>tests.unit.services.normalization.test_value_normalizer.TestValueNormalizer</td>
+                <td class="passed">PASSED</td>
+                <td>0.003</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.services.structure.test_structure_analyzer.TestStructureAnalyzer</td>
+                <td class="passed">PASSED</td>
+                <td>0.418</td>
+            </tr>
+
+            <tr>
+                <td>test_analyze</td>
+                <td>tests.unit.services.structure.test_structure_analyzer.TestStructureAnalyzer</td>
+                <td class="passed">PASSED</td>
+                <td>0.967</td>
+            </tr>
+
+            <tr>
+                <td>test_analyze_empty_dataframe</td>
+                <td>tests.unit.services.structure.test_structure_analyzer.TestStructureAnalyzer</td>
+                <td class="passed">PASSED</td>
+                <td>1.730</td>
+            </tr>
+
+            <tr>
+                <td>test_analyze_with_missing_values</td>
+                <td>tests.unit.services.structure.test_structure_analyzer.TestStructureAnalyzer</td>
+                <td class="passed">PASSED</td>
+                <td>0.945</td>
+            </tr>
+
+            <tr>
+                <td>test_analyze_with_mixed_types</td>
+                <td>tests.unit.services.structure.test_structure_analyzer.TestStructureAnalyzer</td>
+                <td class="passed">PASSED</td>
+                <td>1.119</td>
+            </tr>
+
+            <tr>
+                <td>test_detect_column_types</td>
+                <td>tests.unit.services.structure.test_structure_analyzer.TestStructureAnalyzer</td>
+                <td class="passed">PASSED</td>
+                <td>0.452</td>
+            </tr>
+
+            <tr>
+                <td>test_parallel_imports</td>
+                <td>tests.unit.utils.test_imports.TestImports</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_rate_limiting_imports</td>
+                <td>tests.unit.utils.test_imports.TestImports</td>
+                <td class="passed">PASSED</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td>test_caching_imports</td>
+                <td>tests.unit.utils.test_imports.TestImports</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_phi_client_imports</td>
+                <td>tests.unit.utils.test_imports.TestImports</td>
+                <td class="passed">PASSED</td>
+                <td>0.323</td>
+            </tr>
+
+            <tr>
+                <td>test_gpt_client_imports</td>
+                <td>tests.unit.utils.test_imports.TestImports</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+            <tr>
+                <td>test_llm_factory_imports</td>
+                <td>tests.unit.utils.test_imports.TestImports</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_csv_parser_imports</td>
+                <td>tests.unit.utils.test_imports.TestImports</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_excel_parser_imports</td>
+                <td>tests.unit.utils.test_imports.TestImports</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestCacheEntry</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_is_expired</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestCacheEntry</td>
+                <td class="passed">PASSED</td>
+                <td>0.207</td>
+            </tr>
+
+            <tr>
+                <td>test_access</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestCacheEntry</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_access_pattern_limit</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestCacheEntry</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_get_access_frequency</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestCacheEntry</td>
+                <td class="passed">PASSED</td>
+                <td>0.121</td>
+            </tr>
+
+            <tr>
+                <td>test_get_recency_score</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestCacheEntry</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_calculate_optimal_ttl</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestCacheEntry</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.003</td>
+            </tr>
+
+            <tr>
+                <td>test_get_set_basic</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_expiration</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.205</td>
+            </tr>
+
+            <tr>
+                <td>test_complex_keys</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.003</td>
+            </tr>
+
+            <tr>
+                <td>test_eviction</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.003</td>
+            </tr>
+
+            <tr>
+                <td>test_adaptive_ttl</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.125</td>
+            </tr>
+
+            <tr>
+                <td>test_clear</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_get_stats</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_concurrent_access</td>
+                <td>tests.unit.utils.caching.test_adaptive_cache.TestAdaptiveCache</td>
+                <td class="passed">PASSED</td>
+                <td>0.007</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.utils.parallel.test_parallel_processor.TestParallelProcessor</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_process_dataframe_small</td>
+                <td>tests.unit.utils.parallel.test_parallel_processor.TestParallelProcessor</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+            <tr>
+                <td>test_process_dataframe_large</td>
+                <td>tests.unit.utils.parallel.test_parallel_processor.TestParallelProcessor</td>
+                <td class="passed">PASSED</td>
+                <td>1.303</td>
+            </tr>
+
+            <tr>
+                <td>test_process_dataframe_with_custom_merge</td>
+                <td>tests.unit.utils.parallel.test_parallel_processor.TestParallelProcessor</td>
+                <td class="passed">PASSED</td>
+                <td>0.762</td>
+            </tr>
+
+            <tr>
+                <td>test_process_file_csv</td>
+                <td>tests.unit.utils.parallel.test_parallel_processor.TestParallelProcessor</td>
+                <td class="passed">PASSED</td>
+                <td>0.772</td>
+            </tr>
+
+            <tr>
+                <td>test_executor_type</td>
+                <td>tests.unit.utils.parallel.test_parallel_processor.TestParallelProcessor</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_process_chunks</td>
+                <td>tests.unit.utils.parallel.test_parallel_processor.TestParallelProcessor</td>
+                <td class="passed">PASSED</td>
+                <td>1.163</td>
+            </tr>
+
+            <tr>
+                <td>test_error_handling</td>
+                <td>tests.unit.utils.parallel.test_parallel_processor.TestParallelProcessor</td>
+                <td class="passed">PASSED</td>
+                <td>0.330</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.utils.parsers.test_json_utility_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_json</td>
+                <td>tests.unit.utils.parsers.test_json_utility_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_json_in_code_block</td>
+                <td>tests.unit.utils.parsers.test_json_utility_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_json_with_single_quotes</td>
+                <td>tests.unit.utils.parsers.test_json_utility_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_json_with_unquoted_keys</td>
+                <td>tests.unit.utils.parsers.test_json_utility_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_invalid_json</td>
+                <td>tests.unit.utils.parsers.test_json_utility_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.004</td>
+            </tr>
+
+            <tr>
+                <td>test_extract_json_blocks</td>
+                <td>tests.unit.utils.parsers.test_json_utility_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_extract_and_fix_json</td>
+                <td>tests.unit.utils.parsers.test_json_utility_parser.TestJSONParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.utils.parsers.test_yaml_parser.TestYAMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_yaml</td>
+                <td>tests.unit.utils.parsers.test_yaml_parser.TestYAMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.004</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_yaml_in_code_block</td>
+                <td>tests.unit.utils.parsers.test_yaml_parser.TestYAMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_yaml_in_generic_block</td>
+                <td>tests.unit.utils.parsers.test_yaml_parser.TestYAMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_invalid_yaml</td>
+                <td>tests.unit.utils.parsers.test_yaml_parser.TestYAMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_parse_empty_input</td>
+                <td>tests.unit.utils.parsers.test_yaml_parser.TestYAMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_extract_yaml_blocks</td>
+                <td>tests.unit.utils.parsers.test_yaml_parser.TestYAMLParser</td>
+                <td class="passed">PASSED</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestTokenBucket</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_add_tokens</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestTokenBucket</td>
+                <td class="passed">PASSED</td>
+                <td>0.000</td>
+            </tr>
+
+            <tr>
+                <td>test_consume_immediate</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestTokenBucket</td>
+                <td class="passed">PASSED</td>
+                <td>0.215</td>
+            </tr>
+
+            <tr>
+                <td>test_consume_wait</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestTokenBucket</td>
+                <td class="passed">PASSED</td>
+                <td>0.312</td>
+            </tr>
+
+            <tr>
+                <td>test_get_status</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestTokenBucket</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_init</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestRateLimiter</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_limit_decorator</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestRateLimiter</td>
+                <td class="passed">PASSED</td>
+                <td>1.112</td>
+            </tr>
+
+            <tr>
+                <td>test_token_cost_function</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestRateLimiter</td>
+                <td class="passed">PASSED</td>
+                <td>5.119</td>
+            </tr>
+
+            <tr>
+                <td>test_concurrent_requests</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestRateLimiter</td>
+                <td class="passed">PASSED</td>
+                <td>5.562</td>
+            </tr>
+
+            <tr>
+                <td>test_get_stats</td>
+                <td>tests.unit.utils.rate_limiting.test_rate_limiter.TestRateLimiter</td>
+                <td class="passed">PASSED</td>
+                <td>1.113</td>
+            </tr>
+
+            <tr>
+                <td>test_receive_logs_invalid_content_type</td>
+                <td>tests.unit.web.api.test_logging_controller.TestLoggingController</td>
+                <td class="passed">PASSED</td>
+                <td>0.010</td>
+            </tr>
+
+            <tr>
+                <td>test_receive_logs_invalid_log_entry</td>
+                <td>tests.unit.web.api.test_logging_controller.TestLoggingController</td>
+                <td class="passed">PASSED</td>
+                <td>0.011</td>
+            </tr>
+
+            <tr>
+                <td>test_receive_logs_missing_logs_field</td>
+                <td>tests.unit.web.api.test_logging_controller.TestLoggingController</td>
+                <td class="passed">PASSED</td>
+                <td>0.005</td>
+            </tr>
+
+            <tr>
+                <td>test_receive_logs_server_error</td>
+                <td>tests.unit.web.api.test_logging_controller.TestLoggingController</td>
+                <td class="passed">PASSED</td>
+                <td>0.005</td>
+            </tr>
+
+            <tr>
+                <td>test_receive_logs_valid_request</td>
+                <td>tests.unit.web.api.test_logging_controller.TestLoggingController</td>
+                <td class="passed">PASSED</td>
+                <td>0.009</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <h2>Frontend Test Details</h2>
+
+    <p class="no-results">No frontend test details available</p>
+
+    <h2>Integration Test Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>test_health_check_with_llm_stats</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>0.235</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+</body>
+</html>

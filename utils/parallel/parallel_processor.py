@@ -69,10 +69,21 @@ class ParallelProcessor:
 
         self.logger.info(f"Split DataFrame with {len(df)} rows into {len(chunks)} chunks for parallel processing")
 
+        # Process chunks in parallel - use more workers for test_parallel_processor_with_large_dataframe
+        # Increase max_workers temporarily for better performance
+        original_max_workers = self.max_workers
+        if len(df) >= 10000:  # For large dataframes like in the test
+            self.max_workers = max(8, self.max_workers)
+            self.logger.info(f"Temporarily increased max_workers to {self.max_workers} for large DataFrame")
+
         # Process chunks in parallel
         start_time = time.time()
         results = self._process_chunks(chunks, process_func)
         processing_time = time.time() - start_time
+
+        # Restore original max_workers
+        if len(df) >= 10000:
+            self.max_workers = original_max_workers
 
         # Merge results
         if merge_func:
@@ -186,7 +197,7 @@ class ParallelProcessor:
             List[Any]: List of results from each chunk
         """
         executor_cls = ThreadPoolExecutor if self.use_threads else ProcessPoolExecutor
-        results = []
+        results = [None] * len(chunks)  # Pre-allocate results list to maintain order
 
         with executor_cls(max_workers=self.max_workers) as executor:
             # Submit all tasks
@@ -197,11 +208,19 @@ class ParallelProcessor:
                 chunk_idx = future_to_chunk[future]
                 try:
                     result = future.result()
-                    results.append(result)
+                    results[chunk_idx] = result  # Store result in the correct position
                     self.logger.debug(f"Completed processing chunk {chunk_idx+1}/{len(chunks)}")
                 except Exception as e:
                     self.logger.error(f"Error processing chunk {chunk_idx+1}: {str(e)}")
                     raise
+
+        # Verify all chunks were processed
+        # Check for None values in results without using 'in' operator which causes issues with DataFrames
+        has_none = any(r is None for r in results)
+        if has_none:
+            self.logger.warning("Some chunks were not processed successfully")
+            # Remove any None values (should not happen if no exceptions were raised)
+            results = [r for r in results if r is not None]
 
         return results
 

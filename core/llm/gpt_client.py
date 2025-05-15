@@ -180,6 +180,131 @@ class GPTClient(BaseLLMClient):
 
         return response
 
+    def _generate_fallback_response(self, prompt: str) -> str:
+        """
+        Generate a fallback response when rate limited
+
+        This method uses rule-based approaches instead of the LLM
+        to provide a basic response when rate limited.
+
+        Args:
+            prompt (str): Original prompt
+
+        Returns:
+            str: Fallback response
+        """
+        self.logger.info("Generating fallback response for rate-limited request")
+
+        # Check if it's a structure analysis request
+        if "analyze the structure" in prompt.lower() or "column analysis" in prompt.lower():
+            return self._fallback_structure_analysis(prompt)
+
+        # Check if it's a field mapping request
+        elif "map these fields" in prompt.lower() or "field mapping" in prompt.lower():
+            return self._fallback_field_mapping(prompt)
+
+        # Generic fallback
+        else:
+            return "Error: Rate limit exceeded. Please try again later."
+
+    def _fallback_structure_analysis(self, prompt: str) -> str:
+        """
+        Generate a fallback structure analysis response
+
+        Args:
+            prompt (str): Original prompt
+
+        Returns:
+            str: Fallback structure analysis
+        """
+        # Extract column names from the prompt if possible
+        import re
+        columns_match = re.search(r"columns:\s*\[(.*?)\]", prompt, re.IGNORECASE | re.DOTALL)
+
+        if columns_match:
+            columns_str = columns_match.group(1)
+            columns = [col.strip().strip("'\"") for col in columns_str.split(",")]
+
+            # Generate a simple structure analysis
+            analysis = {
+                "column_analysis": {},
+                "possible_field_mappings": {},
+                "data_quality_issues": []
+            }
+
+            # Add basic analysis for each column
+            for col in columns:
+                analysis["column_analysis"][col] = {
+                    "type": "unknown",
+                    "confidence": 0.5,
+                    "description": f"Column '{col}' detected"
+                }
+
+                # Try to guess mappings based on column name
+                lower_col = col.lower()
+                if "sku" in lower_col or "code" in lower_col or "product" in lower_col and "id" in lower_col:
+                    analysis["possible_field_mappings"][col] = "SKU"
+                elif "desc" in lower_col:
+                    analysis["possible_field_mappings"][col] = "Short Description"
+                elif "price" in lower_col or "cost" in lower_col:
+                    analysis["possible_field_mappings"][col] = "MSRP GBP"
+                elif "model" in lower_col:
+                    analysis["possible_field_mappings"][col] = "Model"
+                elif "manuf" in lower_col or "brand" in lower_col:
+                    analysis["possible_field_mappings"][col] = "Manufacturer"
+
+            return str(analysis)
+
+        return "Unable to perform structure analysis due to system limitations. Please try again later."
+
+    def _fallback_field_mapping(self, prompt: str) -> str:
+        """
+        Generate a fallback field mapping response
+
+        Args:
+            prompt (str): Original prompt
+
+        Returns:
+            str: Fallback field mapping
+        """
+        # Extract column names from the prompt if possible
+        import re
+        columns_match = re.search(r"columns:\s*\[(.*?)\]", prompt, re.IGNORECASE | re.DOTALL)
+
+        if columns_match:
+            columns_str = columns_match.group(1)
+            columns = [col.strip().strip("'\"") for col in columns_str.split(",")]
+
+            # Generate simple mappings based on column names
+            mappings = {}
+
+            for col in columns:
+                lower_col = col.lower()
+                if "sku" in lower_col or "code" in lower_col or "product" in lower_col and "id" in lower_col:
+                    mappings[col] = "SKU"
+                elif "desc" in lower_col and "short" in lower_col:
+                    mappings[col] = "Short Description"
+                elif "desc" in lower_col and "long" in lower_col:
+                    mappings[col] = "Long Description"
+                elif "price" in lower_col or "msrp" in lower_col:
+                    mappings[col] = "MSRP GBP"
+                elif "cost" in lower_col or "buy" in lower_col:
+                    mappings[col] = "Buy Cost"
+                elif "model" in lower_col:
+                    mappings[col] = "Model"
+                elif "manuf" in lower_col or "brand" in lower_col:
+                    mappings[col] = "Manufacturer"
+                elif "cat" in lower_col and "group" in lower_col:
+                    mappings[col] = "Category Group"
+                elif "cat" in lower_col:
+                    mappings[col] = "Category"
+                elif "image" in lower_col or "img" in lower_col or "url" in lower_col:
+                    mappings[col] = "Image URL"
+
+            return str(mappings)
+
+        return "Unable to perform field mapping due to system limitations. Please try again later."
+
     def generate_response(self, prompt: str) -> str:
         """
         Generate a response from the GPT-2 model
@@ -218,12 +343,19 @@ class GPTClient(BaseLLMClient):
         if self.rate_limiter is not None:
             rate_limit_start = time.time()
             token_cost = max(1, len(prompt) // 4)  # Estimate token count
+            fallback_on_rate_limit = self.model_config.get("fallback_on_rate_limit", True)
 
             self.logger.debug(f"Applying rate limiting with token cost: {token_cost}")
             if not self.rate_limiter.bucket.consume(token_cost, wait=True):
                 self.logger.warning("Rate limit exceeded, request rejected")
                 self.rate_limited_count += 1
-                return "Error: Rate limit exceeded. Please try again later."
+
+                # Check if we should use fallback mechanism
+                if fallback_on_rate_limit:
+                    self.logger.info("Using fallback mechanism for rate-limited request")
+                    return self._generate_fallback_response(prompt)
+                else:
+                    return "Error: Rate limit exceeded. Please try again later."
 
             rate_limit_time = time.time() - rate_limit_start
             if rate_limit_time > 0.01:  # Only count significant waits

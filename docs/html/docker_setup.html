@@ -139,7 +139,7 @@
     </div>
 
     <h1>Docker Setup</h1>
-    
+
     <div class="toc">
         <h2>Table of Contents</h2>
         <ul>
@@ -174,6 +174,7 @@
     <h2 id="overview">Overview</h2>
     <p>
         The AV Catalog Converter is designed to be deployed as a containerized application using Docker.
+        The application includes both the backend API and the React frontend in a single container.
         This approach provides several benefits:
     </p>
     <ul>
@@ -181,6 +182,7 @@
         <li>Easy deployment and scaling</li>
         <li>Isolation from the host system</li>
         <li>Simplified dependency management</li>
+        <li>Integrated frontend and backend deployment</li>
     </ul>
     <p>
         This document provides detailed instructions for building, configuring, and running the AV Catalog Converter
@@ -205,65 +207,90 @@
     </div>
 
     <h2 id="docker-components">Docker Components</h2>
-    
+
     <h3 id="dockerfile">Dockerfile</h3>
     <p>
         The <code>Dockerfile</code> defines the container image for the AV Catalog Converter. It is located in the
-        root directory of the project.
+        root directory of the project. It uses a multi-stage build process to build the React frontend and the Python backend.
     </p>
     <div class="component">
         <h4>Key Features</h4>
         <ul>
-            <li>Based on Python 3.10 slim image</li>
+            <li>Multi-stage build for frontend and backend</li>
+            <li>First stage builds the React frontend using Node.js</li>
+            <li>Second stage builds the Python backend and includes the built frontend</li>
             <li>Installs system dependencies</li>
-            <li>Sets up a non-root user for security</li>
             <li>Installs Python dependencies from requirements.txt</li>
             <li>Configures the application directory structure</li>
             <li>Sets up the entrypoint script</li>
         </ul>
     </div>
-    <pre><code>FROM python:3.10-slim
+    <pre><code># Multi-stage build for React frontend and Python backend
+FROM node:16 AS frontend-builder
+
+# Set working directory for frontend
+WORKDIR /app/web/frontend
+
+# Copy frontend package.json and package-lock.json
+COPY web/frontend/package*.json ./
+
+# Install frontend dependencies
+RUN npm install
+
+# Copy frontend source code
+COPY web/frontend/ ./
+
+# Build the frontend
+RUN npm run build
+
+# Use a Python image for the backend
+FROM python:3.9
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    TRANSFORMERS_CACHE=/app/cache/models \
+    TORCH_HOME=/app/cache/torch \
+    PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+
+# Set working directory
+WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libffi-dev \
+    curl \
+    libmagic1 \
+    tesseract-ocr \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create necessary directories
+RUN mkdir -p logs data/input data/output cache/models cache/torch web/frontend/build
 
-# Create app directory and set permissions
-WORKDIR /app
+# Copy requirements file
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy the application code
 COPY . .
 
-# Run tests on container startup
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Copy the built frontend from the frontend-builder stage
+COPY --from=frontend-builder /app/web/frontend/build/ /app/web/frontend/build/
 
-# Set ownership
-RUN chown -R appuser:appuser /app
+# Set permissions
+RUN chmod +x docker/entrypoint.sh
 
-# Switch to non-root user
-USER appuser
-
-# Expose port
+# Expose port for API
 EXPOSE 8080
 
 # Set entrypoint
-ENTRYPOINT ["/entrypoint.sh"]</code></pre>
+ENTRYPOINT ["/app/docker/entrypoint.sh"]</code></pre>
 
     <h3 id="docker-compose">Docker Compose</h3>
     <p>
@@ -337,7 +364,7 @@ echo "Starting API server..."
 exec gunicorn app:app --bind 0.0.0.0:8080 --workers 4 --timeout 120 --access-logfile - --error-logfile -</code></pre>
 
     <h2 id="building-and-running">Building and Running</h2>
-    
+
     <h3 id="building-the-image">Building the Image</h3>
     <p>
         To build the Docker image, run the following command from the project root directory:
@@ -383,7 +410,7 @@ exec gunicorn app:app --bind 0.0.0.0:8080 --workers 4 --timeout 120 --access-log
     </div>
 
     <h2 id="configuration">Configuration</h2>
-    
+
     <h3 id="environment-variables">Environment Variables</h3>
     <p>
         The application can be configured using environment variables. These can be set in the
@@ -465,7 +492,7 @@ exec gunicorn app:app --bind 0.0.0.0:8080 --workers 4 --timeout 120 --access-log
 
     <h3 id="network-configuration">Network Configuration</h3>
     <p>
-        By default, the application exposes port 8080 for the API. This can be changed by modifying the
+        By default, the application exposes port 8080 for both the API and the frontend UI. This can be changed by modifying the
         <code>docker-compose.yml</code> file or the <code>docker run</code> command.
     </p>
     <p>
@@ -569,7 +596,7 @@ exec gunicorn app:app --bind 0.0.0.0:8080 --workers 4 --timeout 120 --access-log
         function copyToClipboard(button) {
             const pre = button.previousElementSibling;
             const text = pre.textContent;
-            
+
             navigator.clipboard.writeText(text).then(() => {
                 const originalText = button.textContent;
                 button.textContent = 'Copied!';

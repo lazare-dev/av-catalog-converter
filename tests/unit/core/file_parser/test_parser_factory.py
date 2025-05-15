@@ -42,7 +42,7 @@ class TestParserFactory:
         """Test fallback detection when magic is not available"""
         # Mock magic as None to test fallback detection
         monkeypatch.setattr('core.file_parser.parser_factory.magic', None)
-        
+
         parser = ParserFactory.create_parser(temp_csv_file)
         assert isinstance(parser, CSVParser)
 
@@ -51,7 +51,7 @@ class TestParserFactory:
         # Rename the file to remove extension
         new_path = temp_json_file.with_suffix('')
         temp_json_file.rename(new_path)
-        
+
         # Test if content detection works
         parser = ParserFactory.create_parser(new_path)
         assert isinstance(parser, JSONParser)
@@ -62,12 +62,13 @@ class TestParserFactory:
         unknown_file = tmp_path / "test_data.unknown"
         with open(unknown_file, 'w') as f:
             f.write("This is a test file with unknown format")
-        
-        # Mock _detect_parser_by_content to return None
+
+        # Create a simple function that always returns None
+        # This is the simplest way to mock the method
         monkeypatch.setattr(
             'core.file_parser.parser_factory.ParserFactory._detect_parser_by_content',
-            lambda cls, path: None
+            lambda *args, **kwargs: None
         )
-        
+
         parser = ParserFactory.create_parser(unknown_file)
         assert isinstance(parser, CSVParser)

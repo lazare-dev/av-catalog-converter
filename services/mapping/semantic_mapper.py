@@ -103,7 +103,15 @@ class SemanticMapper:
         try:
             # Set a longer timeout for mapping which can be complex
             response = self.llm_client.generate_response(prompt)
-            mapping = self._parse_mapping_response(response, columns)
+
+            # Check for rate limiting errors
+            if "rate limit exceeded" in response.lower() or "error:" in response.lower():
+                self.logger.warning(f"Rate limiting detected in response: {response}")
+                # Use fallback mapping based on column names and structure info
+                mapping = self._generate_fallback_mapping(columns, structure_info)
+            else:
+                # Parse the response normally
+                mapping = self._parse_mapping_response(response, columns)
 
             # Validate the mapping
             mapping = self._validate_mapping(mapping, columns)
@@ -117,6 +125,14 @@ class SemanticMapper:
         except Exception as e:
             self.logger.error(f"Error in semantic mapping: {str(e)}")
             self.logger.debug(traceback.format_exc())
+
+            # Check if this is a rate limiting error
+            error_str = str(e).lower()
+            if 'rate limit' in error_str or 'rate_limit' in error_str:
+                self.logger.warning("Rate limit error detected, using fallback mapping")
+                mapping = self._generate_fallback_mapping(columns, structure_info)
+                return self._validate_mapping(mapping, columns)
+
             self.failed_mappings += 1
             return {}
 
@@ -362,3 +378,115 @@ Only include the JSON mapping object in your response, no additional text or exp
         final_mapping = {src: tgt for src, tgt in validated.items() if src in columns}
 
         return final_mapping
+
+    def _generate_fallback_mapping(self, columns: List[str], structure_info: Dict[str, Any] = None) -> Dict[str, str]:
+        """
+        Generate a fallback mapping based on column names and structure info
+
+        Args:
+            columns (List[str]): Input column names
+            structure_info (Dict[str, Any], optional): Structure analysis information
+
+        Returns:
+            Dict[str, str]: Fallback mapping
+        """
+        self.logger.info("Generating fallback field mapping")
+        mapping = {}
+
+        # First, try to use structure info if available
+        if structure_info and 'possible_field_mappings' in structure_info:
+            field_mappings = structure_info.get('possible_field_mappings', {})
+            for field, mapping_info in field_mappings.items():
+                if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                    column = mapping_info['column']
+                    if column in columns and field in FIELD_ORDER:
+                        mapping[column] = field
+                        self.logger.info(f"Using structure info mapping: {column} -> {field}")
+
+        # For remaining columns, use name-based matching
+        for col in columns:
+            if col in mapping:
+                continue  # Already mapped
+
+            lower_col = col.lower()
+
+            # SKU/ID fields
+            if any(term in lower_col for term in ["sku", "id", "code", "product"]) and "SKU" not in mapping.values():
+                mapping[col] = "SKU"
+
+            # Description fields
+            elif any(term in lower_col for term in ["desc", "name", "title"]):
+                if "short" in lower_col or "name" in lower_col:
+                    if "Short Description" not in mapping.values():
+                        mapping[col] = "Short Description"
+                elif "long" in lower_col or "full" in lower_col:
+                    if "Long Description" not in mapping.values():
+                        mapping[col] = "Long Description"
+
+            # Price fields
+            elif any(term in lower_col for term in ["price", "cost", "msrp"]):
+                if "msrp" in lower_col or "rrp" in lower_col:
+                    if "gbp" in lower_col or "£" in lower_col or "pound" in lower_col:
+                        if "MSRP GBP" not in mapping.values():
+                            mapping[col] = "MSRP GBP"
+                    elif "usd" in lower_col or "$" in lower_col or "dollar" in lower_col:
+                        if "MSRP USD" not in mapping.values():
+                            mapping[col] = "MSRP USD"
+                    elif "eur" in lower_col or "€" in lower_col or "euro" in lower_col:
+                        if "MSRP EUR" not in mapping.values():
+                            mapping[col] = "MSRP EUR"
+                    else:
+                        if "MSRP GBP" not in mapping.values():
+                            mapping[col] = "MSRP GBP"
+                elif "buy" in lower_col or "cost" in lower_col:
+                    if "Buy Cost" not in mapping.values():
+                        mapping[col] = "Buy Cost"
+                elif "trade" in lower_col or "wholesale" in lower_col:
+                    if "Trade Price" not in mapping.values():
+                        mapping[col] = "Trade Price"
+
+            # Manufacturer fields
+            elif any(term in lower_col for term in ["manuf", "brand", "make", "vendor"]):
+                if "Manufacturer" not in mapping.values():
+                    mapping[col] = "Manufacturer"
+
+            # Model fields
+            elif any(term in lower_col for term in ["model", "part"]):
+                if "Model" not in mapping.values():
+                    mapping[col] = "Model"
+
+            # Category fields
+            elif any(term in lower_col for term in ["cat", "group", "type", "class"]):
+                if "group" in lower_col or "main" in lower_col or "parent" in lower_col:
+                    if "Category Group" not in mapping.values():
+                        mapping[col] = "Category Group"
+                else:
+                    if "Category" not in mapping.values():
+                        mapping[col] = "Category"
+
+            # Image URL fields
+            elif any(term in lower_col for term in ["image", "img", "url", "photo", "pic"]):
+                if "Image URL" not in mapping.values():
+                    mapping[col] = "Image URL"
+
+            # Document fields
+            elif any(term in lower_col for term in ["doc", "manual", "pdf", "spec"]):
+                if "url" in lower_col or "link" in lower_col:
+                    if "Document URL" not in mapping.values():
+                        mapping[col] = "Document URL"
+                else:
+                    if "Document Name" not in mapping.values():
+                        mapping[col] = "Document Name"
+
+            # Unit of Measure fields
+            elif any(term in lower_col for term in ["unit", "uom", "measure"]):
+                if "Unit Of Measure" not in mapping.values():
+                    mapping[col] = "Unit Of Measure"
+
+            # Discontinued fields
+            elif any(term in lower_col for term in ["disc", "active", "status", "avail"]):
+                if "Discontinued" not in mapping.values():
+                    mapping[col] = "Discontinued"
+
+        self.logger.info(f"Generated fallback mapping with {len(mapping)} fields")
+        return mapping

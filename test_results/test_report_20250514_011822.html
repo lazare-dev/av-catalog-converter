@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Catalog Converter Test Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .summary-box {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            width: 30%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .summary-box h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .success-rate {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .high {
+            color: #27ae60;
+        }
+        .medium {
+            color: #f39c12;
+        }
+        .low {
+            color: #e74c3c;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .passed {
+            color: #27ae60;
+        }
+        .failed {
+            color: #e74c3c;
+        }
+        .error {
+            color: #c0392b;
+        }
+        .skipped {
+            color: #7f8c8d;
+        }
+        .details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #ddd;
+            padding: 10px;
+            margin-top: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .error-details {
+            border-left-color: #e74c3c;
+        }
+        .timestamp {
+            color: #7f8c8d;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+        .no-results {
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AV Catalog Converter Test Report</h1>
+    <p class="timestamp">Generated on 2025-05-14 01:18:22</p>
+
+    <div class="summary">
+
+        <div class="summary-box">
+            <h3>Backend Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+
+        <div class="summary-box">
+            <h3>Frontend Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+
+        <div class="summary-box">
+            <h3>Integration Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+    </div>
+
+    <h2>Backend Test Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>test_health_check</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>0.538</td>
+            </tr>
+
+            <tr>
+                <td>test_upload_file</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>8.911</td>
+            </tr>
+
+            <tr>
+                <td>test_upload_no_file</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>0.117</td>
+            </tr>
+
+            <tr>
+                <td>test_analyze_file</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="failed">FAILED</td>
+                <td>5.889</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> AssertionError: assert 'structure' in {'analysis': {'cache_stats': {'hit_ratio': 0.0, 'hits': 0, 'misses': 1}, 'column_count': 5, 'column_types': {'Category': {'empty': False, 'sample_values': ['Audio', 'Video', 'Audio'], 'type': 'string', 'unique_count': 2, ...}, 'Manufacturer': {'empty': False, 'sample_values': ['Shure', 'Yamaha', 'Sony'], 'type': 'string', 'unique_count': 3, ...}, 'Price': {'empty': False, 'sample_values': [499.0, 299.99, 149.5], 'type': 'decimal', 'unique_count': 3, ...}, 'Product Name': {'empty': False, 'sample_values': ['Wireless Mic', 'Audio Mixer', 'HD Camera'], 'type': 'string', 'unique_count': 3, ...}, ...}, 'columns': ['SKU', 'Product Name', 'Price', 'Category', 'Manufacturer'], ...}, 'file_info': {'filename': 'test_data.csv', 'parser': 'CSVParser', 'product_count': 3, 'size': 156}, 'job_id': '05a493e0-3404-4995-96d1-a6a42a583954', 'llm_factory_stats': {'available_models': ['gpt2', 'distilbert', 'dummy'], 'clients': {'DistilBERTClient': {'cache_avg_ttl': 3600.0, 'cache_base_ttl': 3600, 'cache_evictions': 0, 'cache_expirations': 0, ...}}, 'clients_count': 1, 'errors_count': 0, ...}, ...}
+                        tests/integration/test_api.py:97: in test_analyze_file
+    assert 'structure' in data
+E   AssertionError: assert 'structure' in {'analysis': {'cache_stats': {'hit_ratio': 0.0, 'hits': 0, 'misses': 1}, 'column_count': 5, 'column_types': {'Category': {'empty': False, 'sample_values': ['Audio', 'Video', 'Audio'], 'type': 'string', 'unique_count': 2, ...}, 'Manufacturer': {'empty': False, 'sample_values': ['Shure', 'Yamaha', 'Sony'], 'type': 'string', 'unique_count': 3, ...}, 'Price': {'empty': False, 'sample_values': [499.0, 299.99, 149.5], 'type': 'decimal', 'unique_count': 3, ...}, 'Product Name': {'empty': False, 'sample_values': ['Wireless Mic', 'Audio Mixer', 'HD Camera'], 'type': 'string', 'unique_count': 3, ...}, ...}, 'columns': ['SKU', 'Product Name', 'Price', 'Category', 'Manufacturer'], ...}, 'file_info': {'filename': 'test_data.csv', 'parser': 'CSVParser', 'product_count': 3, 'size': 156}, 'job_id': '05a493e0-3404-4995-96d1-a6a42a583954', 'llm_factory_stats': {'available_models': ['gpt2', 'distilbert', 'dummy'], 'clients': {'DistilBERTClient': {'cache_avg_ttl': 3600.0, 'cache_base_ttl': 3600, 'cache_evictions': 0, 'cache_expirations': 0, ...}}, 'clients_count': 1, 'errors_count': 0, ...}, ...}
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>test_map_fields</td>
+                <td>tests.integration.test_api.TestAPI</td>
+                <td class="passed">PASSED</td>
+                <td>0.638</td>
+            </tr>
+
+            <tr>
+                <td>test_health_check_with_llm_stats</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>0.112</td>
+            </tr>
+
+            <tr>
+                <td>test_upload_file_with_parallel_processing</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>0.344</td>
+            </tr>
+
+            <tr>
+                <td>test_analyze_file_with_optimized_components</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>5.572</td>
+            </tr>
+
+            <tr>
+                <td>test_map_fields_with_rate_limiting</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="failed">FAILED</td>
+                <td>0.008</td>
+            </tr>
+
+            <tr>
+                <td colspan="4">
+                    <div class="details error-details">
+                        <strong>:</strong> assert 404 == 200
+ +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+                        tests/integration/test_api_with_optimizations.py:177: in test_map_fields_with_rate_limiting
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>test_process_csv_file</td>
+                <td>tests.integration.test_end_to_end.TestEndToEnd</td>
+                <td class="passed">PASSED</td>
+                <td>6.419</td>
+            </tr>
+
+            <tr>
+                <td>test_process_json_file</td>
+                <td>tests.integration.test_end_to_end.TestEndToEnd</td>
+                <td class="passed">PASSED</td>
+                <td>66.208</td>
+            </tr>
+
+            <tr>
+                <td>Unknown</td>
+                <td>Unknown</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <h2>Frontend Test Details</h2>
+
+    <p class="no-results">No frontend test details available</p>
+
+    <h2>Integration Test Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>test_health_check_with_llm_stats</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>0.235</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+</body>
+</html>

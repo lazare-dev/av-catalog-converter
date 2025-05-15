@@ -4,7 +4,17 @@ Logging utility for consistent logging across all modules
 import logging
 import inspect
 import functools
+import os
+import threading
+from datetime import datetime
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
+
+# Try to import psutil for enhanced process information
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 
 # Type variables for function decorators
 F = TypeVar('F', bound=Callable[..., Any])
@@ -109,30 +119,86 @@ class Logger:
         """
         self._log(logging.CRITICAL, message, exc_info=exc_info, **kwargs)
 
-    def _log(self, level: int, message: str, exc_info: Optional[bool] = None, **kwargs: Any) -> None:
+    def _log(self, level: int, message: str, exc_info: Optional[bool] = None, stack_info: bool = False, **kwargs: Any) -> None:
         """
-        Internal method to log a message
+        Internal method to log a message with enhanced context
 
         Args:
             level: The log level
             message: The message to log
             exc_info: Whether to include exception info
+            stack_info: Whether to include stack info
             **kwargs: Additional context to include in the log
         """
         # Merge the current context with the provided kwargs
         extra = {**self._context, **kwargs}
 
-        # Get the caller information
+        # Get the caller information (more detailed)
         frame = inspect.currentframe()
         if frame:
             caller_frame = frame.f_back
             if caller_frame:
+                # Basic caller info
                 extra['file'] = caller_frame.f_code.co_filename
                 extra['line'] = caller_frame.f_lineno
                 extra['function'] = caller_frame.f_code.co_name
 
-        # Log the message
-        self._logger.log(level, message, exc_info=exc_info, extra={'extra': extra})
+                # Enhanced caller info
+                extra['module'] = inspect.getmodule(caller_frame).__name__ if inspect.getmodule(caller_frame) else "unknown"
+
+                # Add local variables if in debug level
+                if level <= logging.DEBUG:
+                    try:
+                        # Get local variables from the caller's frame
+                        local_vars = {k: v for k, v in caller_frame.f_locals.items()
+                                     if not k.startswith('_') and k != 'self' and not inspect.ismodule(v)}
+
+                        # Add a subset of local variables to avoid excessive logging
+                        # Filter out large objects, functions, etc.
+                        filtered_vars = {}
+                        for k, v in local_vars.items():
+                            # Skip if it's a common large object type
+                            if isinstance(v, (list, dict, set)) and len(v) > 10:
+                                filtered_vars[k] = f"{type(v).__name__} with {len(v)} items"
+                            elif hasattr(v, '__dict__') and not isinstance(v, type):
+                                filtered_vars[k] = f"{type(v).__name__} instance"
+                            elif not isinstance(v, (str, int, float, bool, type(None))):
+                                filtered_vars[k] = f"{type(v).__name__}"
+                            else:
+                                filtered_vars[k] = v
+
+                        extra['local_vars'] = filtered_vars
+                    except Exception:
+                        # Ignore errors when trying to get local variables
+                        pass
+
+        # Add timestamp for precise timing analysis
+        extra['timestamp'] = datetime.now().isoformat()
+
+        # Add thread information
+        import threading
+        extra['thread_name'] = threading.current_thread().name
+        extra['thread_id'] = threading.get_ident()
+
+        # Add process information
+        extra['process_id'] = os.getpid()
+
+        # Add enhanced process information if psutil is available
+        if PSUTIL_AVAILABLE:
+            try:
+                process = psutil.Process(os.getpid())
+                extra['process_info'] = {
+                    'pid': process.pid,
+                    'memory_percent': process.memory_percent(),
+                    'cpu_percent': process.cpu_percent(interval=0.1),
+                    'num_threads': process.num_threads()
+                }
+            except Exception:
+                # Ignore errors when trying to get process info
+                pass
+
+        # Log the message with enhanced information
+        self._logger.log(level, message, exc_info=exc_info, stack_info=stack_info, extra={'extra': extra})
 
     def context(self, **kwargs: Any) -> 'LoggerContext':
         """

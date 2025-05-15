@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Catalog Converter Test Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .summary-box {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            width: 30%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .summary-box h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .success-rate {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .high {
+            color: #27ae60;
+        }
+        .medium {
+            color: #f39c12;
+        }
+        .low {
+            color: #e74c3c;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .passed {
+            color: #27ae60;
+        }
+        .failed {
+            color: #e74c3c;
+        }
+        .error {
+            color: #c0392b;
+        }
+        .skipped {
+            color: #7f8c8d;
+        }
+        .details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #ddd;
+            padding: 10px;
+            margin-top: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .error-details {
+            border-left-color: #e74c3c;
+        }
+        .timestamp {
+            color: #7f8c8d;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+        .no-results {
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AV Catalog Converter Test Report</h1>
+    <p class="timestamp">Generated on 2025-05-13 23:03:47</p>
+    
+    <div class="summary">
+
+        <div class="summary-box">
+            <h3>Backend Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+
+        <div class="summary-box">
+            <h3>Frontend Tests</h3>
+
+            <p class="no-results">No frontend test results available</p>
+
+        </div>
+
+        <div class="summary-box">
+            <h3>Integration Tests</h3>
+
+            <p>Total Tests: 0</p>
+            <p>Passed: 0</p>
+            <p>Failed: 0</p>
+            <p>Errors: 0</p>
+            <p>Skipped: 0</p>
+            <p>Success Rate: <span class="success-rate low">0.00%</span></p>
+
+        </div>
+    </div>
+
+    <h2>Backend Test Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>test_init_with_adaptive_cache</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.393</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_standard_cache</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.318</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.318</td>
+            </tr>
+
+            <tr>
+                <td>test_init_without_rate_limiting</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.210</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_cache_hit</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.420</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.736</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting_exceeded</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.730</td>
+            </tr>
+
+            <tr>
+                <td>test_get_stats</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.312</td>
+            </tr>
+
+            <tr>
+                <td>test_batch_generate</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.316</td>
+            </tr>
+
+            <tr>
+                <td>test_process_masked_chunk</td>
+                <td>tests.unit.core.llm.test_distilbert_client.TestDistilBERTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.318</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_adaptive_cache</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.109</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_standard_cache</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.106</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.106</td>
+            </tr>
+
+            <tr>
+                <td>test_init_without_rate_limiting</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.106</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_cache_hit</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.112</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.116</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting_exceeded</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.113</td>
+            </tr>
+
+            <tr>
+                <td>test_get_stats_with_rate_limiter</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.104</td>
+            </tr>
+
+            <tr>
+                <td>test_batch_generate</td>
+                <td>tests.unit.core.llm.test_gpt_client.TestGPTClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.110</td>
+            </tr>
+
+            <tr>
+                <td>test_get_model_type_explicit</td>
+                <td>tests.unit.core.llm.test_llm_factory.TestLLMFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_get_model_type_from_id</td>
+                <td>tests.unit.core.llm.test_llm_factory.TestLLMFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_get_model_type_default</td>
+                <td>tests.unit.core.llm.test_llm_factory.TestLLMFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.002</td>
+            </tr>
+
+            <tr>
+                <td>test_get_available_models</td>
+                <td>tests.unit.core.llm.test_llm_factory.TestLLMFactory</td>
+                <td class="passed">PASSED</td>
+                <td>0.001</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_adaptive_cache</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_standard_cache</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.107</td>
+            </tr>
+
+            <tr>
+                <td>test_init_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+            <tr>
+                <td>test_init_without_rate_limiting</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.105</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_cache_hit</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.112</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.110</td>
+            </tr>
+
+            <tr>
+                <td>test_generate_response_with_rate_limiting_exceeded</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+            <tr>
+                <td>test_get_stats_with_rate_limiter</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.109</td>
+            </tr>
+
+            <tr>
+                <td>test_batch_generate</td>
+                <td>tests.unit.core.llm.test_phi_client.TestPhiClient</td>
+                <td class="passed">PASSED</td>
+                <td>0.111</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <h2>Frontend Test Details</h2>
+
+    <p class="no-results">No frontend test details available</p>
+
+    <h2>Integration Test Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Time (s)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>test_health_check_with_llm_stats</td>
+                <td>tests.integration.test_api_with_optimizations.TestAPIWithOptimizations</td>
+                <td class="passed">PASSED</td>
+                <td>0.235</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+</body>
+</html>

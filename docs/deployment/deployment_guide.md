@@ -40,8 +40,7 @@ Docker is the recommended deployment method for the AV Catalog Converter, as it 
    ```
 
 3. Access the application:
-   - Web UI: http://localhost:3000
-   - API: http://localhost:8080
+   - Web UI and API: http://localhost:8080
 
 4. Stop the containers:
    ```bash
@@ -82,8 +81,7 @@ Common configuration options:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `AV_CATALOG_API_PORT` | API server port | 8080 |
-| `AV_CATALOG_UI_PORT` | Web UI port | 3000 |
+| `AV_CATALOG_PORT` | Application server port | 8080 |
 | `AV_CATALOG_LOG_LEVEL` | Logging level | INFO |
 | `AV_CATALOG_WORKERS` | Number of worker processes | CPU count |
 | `AV_CATALOG_CACHE_SIZE` | Cache size in MB | 512 |
@@ -126,6 +124,25 @@ For development or testing purposes, you can deploy the application locally with
 
 ### Frontend Deployment
 
+The frontend is now integrated with the backend and is served directly by the Flask application. There are two ways to deploy the frontend:
+
+#### Option 1: Integrated Deployment (Recommended)
+
+1. Build the frontend using the provided script:
+   ```bash
+   # From the project root
+   ./build_frontend.sh
+   ```
+
+2. Start the API server with integrated frontend:
+   ```bash
+   python app.py --api --port 8080
+   ```
+
+3. Access the application at http://localhost:8080
+
+#### Option 2: Separate Development Server (For Development Only)
+
 1. Navigate to the frontend directory:
    ```bash
    cd web/frontend
@@ -141,10 +158,7 @@ For development or testing purposes, you can deploy the application locally with
    npm start
    ```
 
-4. For production builds:
-   ```bash
-   npm run build
-   ```
+4. Access the frontend at http://localhost:3000 and ensure the backend is running at http://localhost:8080
 
 ## Cloud Deployment
 

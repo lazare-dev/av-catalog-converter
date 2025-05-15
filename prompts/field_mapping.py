@@ -106,17 +106,16 @@ def get_field_mapping_prompt(standard_fields, input_columns: list,
         structure_info_str += "No detailed structure analysis available.\n"
 
     # Prepare prompt with all information
-    # Replace all placeholders that might be in the template but not in our format call
+    # Get the template
     template = FIELD_MAPPING_TEMPLATE
-    for placeholder in ['{field_mappings}', '{unmapped_standard_fields}', '{unmapped_input_columns}']:
-        template = template.replace(placeholder, '')
 
-    # Format the template with our data
-    prompt = template.format(
-        standard_fields=standard_fields_str,
-        input_columns=input_columns_str,
-        column_samples=column_samples_str,
-        structure_info=structure_info_str
-    )
+    # Create a copy of the template to avoid modifying the original
+    prompt_template = template
+
+    # Replace the placeholders with our data
+    prompt = prompt_template.replace('{standard_fields}', standard_fields_str)
+    prompt = prompt.replace('{input_columns}', input_columns_str)
+    prompt = prompt.replace('{column_samples}', column_samples_str)
+    prompt = prompt.replace('{structure_info}', structure_info_str)
 
     return prompt

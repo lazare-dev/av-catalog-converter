@@ -126,8 +126,8 @@ def mock_adaptive_cache():
 
 # Fixtures for LLM tests
 @pytest.fixture
-def mock_phi_client():
-    """Return a mock Phi client"""
+def mock_distilbert_client():
+    """Return a mock DistilBERT client"""
     mock_client = MagicMock()
     mock_client.generate_response.side_effect = lambda p: f"Response to {p}"
     mock_client.get_stats.return_value = {
@@ -135,12 +135,32 @@ def mock_phi_client():
         'total_tokens_generated': 500,
         'average_generation_time': 0.5,
         'cache_hits': 5,
-        'model_id': 'microsoft/phi-2',
+        'model_id': 'distilbert-base-uncased',
         'is_initialized': True,
         'rate_limited_count': 2,
         'rate_limited_wait_time': 1.5
     }
+    # Add model_config attribute with the expected model_id
+    mock_client.model_config = {'model_id': 'distilbert-base-uncased'}
+    # Add get_model_info method
+    mock_client.get_model_info = MagicMock(return_value={
+        'model_id': 'distilbert-base-uncased',
+        'model_type': 'distilbert',
+        'quantization': '8bit',
+        'device': 'cpu'
+    })
+    # Add cache_hits and rate_limited_count attributes
+    mock_client.cache_hits = 5
+    mock_client.rate_limited_count = 2
+    # Add _is_initialized attribute
+    mock_client._is_initialized = True
     return mock_client
+
+# For backward compatibility with existing tests
+@pytest.fixture
+def mock_phi_client():
+    """Return a mock client (for backward compatibility)"""
+    return mock_distilbert_client()
 
 # Fixtures for parallel processing tests
 @pytest.fixture

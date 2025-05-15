@@ -99,13 +99,26 @@ def upload_file():
         import uuid
         job_id = str(uuid.uuid4())
 
+        # Try to get row count
+        row_count = 0
+        if hasattr(parser, 'get_row_count'):
+            try:
+                row_count = parser.get_row_count()
+            except:
+                pass
+
+        # If we couldn't get row count, use sample length
+        if row_count == 0 and not sample.empty:
+            row_count = len(sample)
+
         # Store job info
         active_jobs[job_id] = {
             'file_path': file_path,
             'filename': filename,
             'status': 'uploaded',
             'progress': 0,
-            'sample_data': sample.to_dict() if not sample.empty else {}
+            'row_count': row_count,
+            'sample_data': sample.to_dict(orient='records') if not sample.empty else {}
         }
 
         return jsonify({
@@ -113,6 +126,7 @@ def upload_file():
             'message': 'File uploaded successfully',
             'job_id': job_id,
             'filename': filename,
+            'row_count': row_count,
             'sample_data': sample.to_json(orient='records')
         })
 
@@ -189,12 +203,26 @@ def analyze_file():
         # Extract potential field mappings
         field_mappings = structure_info.get('possible_field_mappings', {})
 
+        # Update job with row count if available
+        if 'row_count' not in job and 'row_count' in structure_info:
+            job['row_count'] = structure_info['row_count']
+
+        # If we have effective rows, use that as the primary row count
+        if 'effective_rows' in structure_info:
+            job['row_count'] = structure_info['effective_rows']
+
         return jsonify({
             'success': True,
             'message': 'File analyzed successfully',
             'field_mappings': field_mappings,
             'column_info': structure_info.get('column_analysis', {}),
-            'data_quality': structure_info.get('data_quality_issues', [])
+            'data_quality': structure_info.get('data_quality_issues', []),
+            'structure': {
+                'row_count': job.get('row_count', 0),
+                'column_count': structure_info.get('column_count', 0),
+                'effective_rows': structure_info.get('effective_rows', 0),
+                'data_rows': structure_info.get('data_rows', 0)
+            }
         })
 
     except Exception as e:
@@ -431,6 +459,7 @@ def get_job_status(job_id):
         'status': job['status'],
         'progress': job['progress'],
         'filename': job['filename'],
+        'row_count': job.get('row_count', 0),
         'error': job.get('error'),
         'llm_stats': job.get('llm_stats', {})
     })

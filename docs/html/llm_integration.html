@@ -149,6 +149,7 @@
                 <ul>
                     <li><a href="#llm-factory">LLM Factory</a></li>
                     <li><a href="#base-client">Base LLM Client</a></li>
+                    <li><a href="#distilbert-client">DistilBERT Client</a></li>
                     <li><a href="#gpt-client">GPT Client</a></li>
                     <li><a href="#phi-client">Phi Client</a></li>
                 </ul>
@@ -168,9 +169,9 @@
 
     <h2 id="overview">Overview</h2>
     <p>
-        The AV Catalog Converter integrates with OpenAI's GPT-2 model to provide intelligent data processing capabilities.
+        The AV Catalog Converter integrates with Hugging Face's DistilBERT model to provide intelligent data processing capabilities.
         This integration enables the application to perform complex tasks such as field mapping, category extraction, and data normalization
-        with a good balance of accuracy and performance.
+        with an excellent balance of accuracy and performance.
     </p>
     <p>
         The LLM integration is designed to be:
@@ -191,7 +192,8 @@
         <ul>
             <li><strong>LLMFactory</strong> - Creates and manages LLM clients</li>
             <li><strong>BaseLLMClient</strong> - Abstract base class defining the interface</li>
-            <li><strong>GPTClient</strong> - Primary implementation for OpenAI's GPT-2 model</li>
+            <li><strong>DistilBERTClient</strong> - Primary implementation for Hugging Face's DistilBERT model</li>
+            <li><strong>GPTClient</strong> - Alternative implementation for OpenAI's GPT-2 model</li>
             <li><strong>PhiClient</strong> - Alternative implementation for Microsoft's Phi-2 model</li>
             <li><strong>AdaptiveCache</strong> - TTL-based caching for responses</li>
             <li><strong>RateLimiter</strong> - Token bucket-based rate limiting</li>
@@ -231,10 +233,27 @@
         </ul>
     </div>
 
+    <h3 id="distilbert-client">DistilBERT Client</h3>
+    <p>
+        The <code>DistilBERTClient</code> is the primary implementation of <code>BaseLLMClient</code> for Hugging Face's DistilBERT model.
+        It is optimized for performance, accuracy, and Docker compatibility, making it ideal for production deployments.
+    </p>
+    <div class="component">
+        <h4>Key Features</h4>
+        <ul>
+            <li>Optimized for Hugging Face's DistilBERT model</li>
+            <li>Efficient masked language model approach for text generation</li>
+            <li>Support for 8-bit quantization for reduced memory usage</li>
+            <li>Implements adaptive caching for better performance</li>
+            <li>Configurable rate limiting to prevent overloading</li>
+            <li>Efficient tokenization and response generation</li>
+        </ul>
+    </div>
+
     <h3 id="gpt-client">GPT Client</h3>
     <p>
-        The <code>GPTClient</code> is the primary implementation of <code>BaseLLMClient</code> for OpenAI's GPT-2 model.
-        It is optimized for performance and Docker compatibility, making it ideal for production deployments.
+        The <code>GPTClient</code> is an alternative implementation of <code>BaseLLMClient</code> for OpenAI's GPT-2 model.
+        It is available as a fallback option for compatibility with existing systems.
     </p>
     <div class="component">
         <h4>Key Features</h4>
@@ -277,12 +296,12 @@
         <tr>
             <td>model_id</td>
             <td>The model identifier</td>
-            <td>gpt2</td>
+            <td>distilbert-base-uncased</td>
         </tr>
         <tr>
             <td>model_type</td>
-            <td>The model type (gpt2 or phi)</td>
-            <td>gpt2</td>
+            <td>The model type (distilbert, gpt2, or phi)</td>
+            <td>distilbert</td>
         </tr>
         <tr>
             <td>quantization</td>
@@ -361,8 +380,9 @@
 
     <h3 id="quantization">Model Quantization</h3>
     <p>
-        The Phi client supports model quantization to reduce memory usage and improve inference speed.
-        Both 4-bit and 8-bit quantization are supported using the BitsAndBytes library.
+        The DistilBERT and Phi clients support model quantization to reduce memory usage and improve inference speed.
+        8-bit quantization is supported for DistilBERT, while both 4-bit and 8-bit quantization are supported for Phi,
+        using the BitsAndBytes library.
     </p>
     <div class="warning">
         <p>
@@ -377,14 +397,18 @@
     </p>
     <pre><code>from core.llm.llm_factory import LLMFactory
 
-# Get an LLM client
+# Get an LLM client (will use DistilBERT by default)
 llm_client = LLMFactory.create_client()
 
 # Generate a response
 prompt = "Extract the product category from this description: 'Sony 65-inch 4K OLED TV with HDR'"
 response = llm_client.generate_response(prompt)
 
-print(response)  # Output: "Electronics > Televisions > OLED TVs"</code></pre>
+print(response)  # Output: "Electronics > Televisions > OLED TVs"
+
+# You can also specify a different model if needed
+gpt_config = {"model_id": "gpt2", "model_type": "gpt2"}
+gpt_client = LLMFactory.create_client(gpt_config)</code></pre>
 
     <h2 id="extending">Extending with New Models</h2>
     <p>
@@ -415,6 +439,7 @@ class NewModelClient(BaseLLMClient):
 
 # 2. Add to CLIENT_MAP in LLMFactory
 CLIENT_MAP = {
+    "distilbert": DistilBERTClient,
     "phi": PhiClient,
     "gpt2": GPTClient,
     "new_model": NewModelClient,

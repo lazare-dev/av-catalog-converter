@@ -1,15 +1,27 @@
 # core/llm/phi_client.py
 """
 Phi-specific LLM implementation for AV Catalog Converter
-Optimized for Microsoft's Phi-2 model
+Optimized for Microsoft's Phi-2 model with enhanced performance
 """
 import logging
+import os
 import time
 import traceback
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import pipeline
+
 # Check if BitsAndBytesConfig is available (newer versions of transformers)
 try:
     from transformers import BitsAndBytesConfig
@@ -20,9 +32,10 @@ except ImportError:
 from core.llm.base_client import BaseLLMClient
 from utils.caching.adaptive_cache import AdaptiveCache
 from utils.rate_limiting.rate_limiter import RateLimiter
+from utils.logging.logger import Logger
 
 class PhiClient(BaseLLMClient):
-    """Client for Microsoft's Phi models"""
+    """Client for Microsoft's Phi-2 models with optimizations"""
 
     def __init__(self, model_config: Dict[str, Any]):
         """
@@ -32,182 +45,143 @@ class PhiClient(BaseLLMClient):
             model_config (Dict[str, Any]): Model configuration
         """
         super().__init__(model_config)
-        self.logger = logging.getLogger(__name__)
 
+        # Set default model if not specified
+        if "model_id" not in self.model_config or not self.model_config["model_id"]:
+            self.model_config["model_id"] = "microsoft/phi-2"
+            self.logger.info("No model_id specified, using default: microsoft/phi-2")
+
+        # Initialize model and tokenizer to None
         self.model = None
         self.tokenizer = None
+        self.text_generation_pipeline = None
         self._is_initialized = False
-        self._initialization_error = None
 
-        # Setup cache if enabled
+        # Initialize cache if enabled
         self.cache = None
-        if model_config.get("cache_enabled", True):  # Default to True for better performance
-            # Get cache configuration
-            cache_type = model_config.get("cache_type", "adaptive")
-            base_ttl = model_config.get("cache_ttl", 3600)  # Default: 1 hour
-            max_size = model_config.get("cache_max_size", 1000)
-
+        self.cache_hits = 0
+        if self.model_config.get("cache_enabled", True):
+            cache_type = self.model_config.get("cache_type", "adaptive")
             if cache_type == "adaptive":
                 self.cache = AdaptiveCache(
-                    base_ttl=base_ttl,
-                    max_size=max_size,
-                    cleanup_interval=300  # Clean up every 5 minutes
+                    base_ttl=self.model_config.get("cache_ttl", 3600),
+                    max_size=self.model_config.get("cache_max_size", 1000)
                 )
-                self.logger.info(f"Adaptive LLM response caching enabled (base TTL: {base_ttl}s, max size: {max_size})")
-            else:
-                # Import MemoryCache for backward compatibility
+                self.logger.info("Initialized adaptive cache",
+                               base_ttl=self.model_config.get("cache_ttl", 3600),
+                               max_size=self.model_config.get("cache_max_size", 1000))
+            elif cache_type == "memory":
                 from utils.caching.memory_cache import MemoryCache
-                self.cache = MemoryCache(ttl=base_ttl)
-                self.logger.info(f"Standard LLM response caching enabled (TTL: {base_ttl}s)")
+                self.cache = MemoryCache(ttl=self.model_config.get("cache_ttl", 3600))
+                self.logger.info("Initialized memory cache",
+                               ttl=self.model_config.get("cache_ttl", 3600))
+            elif cache_type == "disk":
+                from utils.caching.disk_cache import DiskCache
+                self.cache = DiskCache(ttl=self.model_config.get("cache_ttl", 3600))
+                self.logger.info("Initialized disk cache",
+                               ttl=self.model_config.get("cache_ttl", 3600))
 
-        # Set default parameters if not provided
-        self.max_new_tokens = model_config.get("max_new_tokens", 512)
-        self.temperature = model_config.get("temperature", 0.3)
-        self.top_p = model_config.get("top_p", 0.95)
-        self.repetition_penalty = model_config.get("repetition_penalty", 1.1)
-
-        # Setup rate limiting
+        # Initialize rate limiter if enabled
         self.rate_limiter = None
-        if model_config.get("rate_limiting_enabled", True):  # Default to True for API protection
+        self.rate_limited_count = 0
+        self.rate_limited_wait_time = 0
+        if self.model_config.get("rate_limiting_enabled", True):
+            requests_per_minute = self.model_config.get("requests_per_minute", 60)
+            burst_size = self.model_config.get("burst_size", 10)
+
             # Calculate token cost based on prompt length
             def token_cost_func(prompt):
                 # Estimate token count (rough approximation)
                 return max(1, len(prompt) // 4)
-
-            # Get rate limiting parameters
-            requests_per_minute = model_config.get("requests_per_minute", 60)  # Default: 1 request per second
-            burst_size = model_config.get("burst_size", 10)  # Default: 10 requests burst
 
             self.rate_limiter = RateLimiter(
                 requests_per_minute=requests_per_minute,
                 burst_size=burst_size,
                 token_cost_func=token_cost_func
             )
-            self.logger.info(f"Rate limiting enabled: {requests_per_minute} requests/minute, burst size: {burst_size}")
-
-        # Track generation stats
-        self.total_generations = 0
-        self.total_tokens_generated = 0
-        self.total_generation_time = 0
-        self.cache_hits = 0
-        self.rate_limited_count = 0
-        self.rate_limited_wait_time = 0.0
+            self.logger.info("Initialized rate limiter",
+                           requests_per_minute=requests_per_minute,
+                           burst_size=burst_size)
 
     def initialize_model(self):
-        """
-        Initialize and load the Phi model
-        """
+        """Initialize the Phi model and tokenizer"""
         if self._is_initialized:
+            self.logger.debug("Model already initialized")
             return
-
-        if self._initialization_error:
-            self.logger.warning(f"Previous initialization failed: {self._initialization_error}")
 
         self.logger.info(f"Initializing Phi model: {self.model_config['model_id']}")
 
         try:
-            # Configure quantization if specified - but we'll use it only in the fallback approach
-            quantization = self.model_config.get("quantization")
-            self.logger.info(f"Quantization setting: {quantization}")
+            # Load tokenizer
+            self.logger.debug("Loading tokenizer")
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_config["model_id"])
 
-            # We'll skip quantization for the initial attempt to improve compatibility
+            # Configure quantization if enabled
+            quantization = self.model_config.get("quantization", None)
+            device_map = self.model_config.get("device_map", "auto")
 
-            # Load tokenizer with proper error handling
-            try:
-                self.tokenizer = AutoTokenizer.from_pretrained(
-                    self.model_config["model_id"],
-                    use_fast=True
+            # Log memory information
+            if psutil:
+                mem_info = psutil.virtual_memory()
+                self.logger.info(f"Available memory: {mem_info.available / (1024 * 1024 * 1024):.2f} GB")
+
+            # Load model with quantization if specified
+            if quantization == "8bit" and BITSANDBYTES_AVAILABLE:
+                self.logger.info("Loading model with 8-bit quantization")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_8bit=True,
+                    llm_int8_threshold=6.0
                 )
-            except Exception as tokenizer_error:
-                self.logger.error(f"Error loading tokenizer: {str(tokenizer_error)}")
-                self.logger.debug(traceback.format_exc())
-                raise RuntimeError(f"Failed to load tokenizer: {str(tokenizer_error)}")
-
-            # Load model with proper error handling and memory optimization
-            try:
-                # Set low_cpu_mem_usage to True for better memory management
-                # Add more detailed error logging
-                self.logger.info(f"Loading model {self.model_config['model_id']} with device_map={self.model_config.get('device_map', 'auto')}")
-
-                # Print available memory
-                import psutil
-                self.logger.info(f"Available memory: {psutil.virtual_memory().available / (1024 * 1024 * 1024):.2f} GB")
-
-                # Try to load with more conservative settings
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_config["model_id"],
-                    device_map=self.model_config.get("device_map", "auto"),
-                    torch_dtype=torch.float32,  # Use float32 instead of float16 for better compatibility
-                    trust_remote_code=True,
-                    low_cpu_mem_usage=True
+                    device_map=device_map,
+                    quantization_config=quantization_config,
+                    trust_remote_code=True
                 )
-                self.logger.info(f"Model loaded successfully")
-            except Exception as model_error:
-                self.logger.error(f"Error loading model: {str(model_error)}")
-                self.logger.debug(traceback.format_exc())
-                # Try a fallback approach with even more conservative settings
-                try:
-                    self.logger.info("Trying fallback approach with CPU only")
-                    self.model = AutoModelForCausalLM.from_pretrained(
-                        self.model_config["model_id"],
-                        device_map="cpu",
-                        torch_dtype=torch.float32,
-                        trust_remote_code=True,
-                        low_cpu_mem_usage=True
-                    )
-                    self.logger.info("Model loaded successfully with fallback approach")
-                except Exception as fallback_error:
-                    self.logger.error(f"Fallback approach also failed: {str(fallback_error)}")
-                    self.logger.debug(traceback.format_exc())
-                    raise RuntimeError(f"Failed to load model: {str(model_error)}")
+            elif quantization == "4bit" and BITSANDBYTES_AVAILABLE:
+                self.logger.info("Loading model with 4-bit quantization")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.float16
+                )
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_config["model_id"],
+                    device_map=device_map,
+                    quantization_config=quantization_config,
+                    trust_remote_code=True
+                )
+            else:
+                self.logger.info(f"Loading model with standard settings (device_map={device_map})")
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_config["model_id"],
+                    device_map=device_map,
+                    trust_remote_code=True
+                )
+
+            # Create text generation pipeline
+            self.logger.debug("Creating text generation pipeline")
+            self.text_generation_pipeline = pipeline(
+                "text-generation",
+                model=self.model,
+                tokenizer=self.tokenizer,
+                max_new_tokens=self.model_config.get("max_new_tokens", 256),
+                temperature=self.model_config.get("temperature", 0.7),
+                top_p=self.model_config.get("top_p", 0.9),
+                top_k=self.model_config.get("top_k", 50),
+                repetition_penalty=self.model_config.get("repetition_penalty", 1.1)
+            )
 
             self._is_initialized = True
-            self._initialization_error = None
-            self.logger.info(f"Phi model initialized successfully")
+            self.logger.info("Phi model initialized successfully")
 
         except Exception as e:
-            error_msg = f"Error initializing Phi model: {str(e)}"
-            self.logger.error(error_msg)
-            self.logger.debug(traceback.format_exc())
-            self._initialization_error = str(e)
-            raise RuntimeError(error_msg)
-
-    def _format_prompt(self, prompt: str) -> str:
-        """
-        Format the prompt for the Phi model
-
-        Args:
-            prompt (str): Raw prompt
-
-        Returns:
-            str: Formatted prompt
-        """
-        # Phi-2 works well with this simple instruction format
-        return f"Instruction: {prompt}\n\nResponse:"
-
-    def _extract_response(self, generated_text: str, formatted_prompt: str) -> str:
-        """
-        Extract the model's response from the generated text
-
-        Args:
-            generated_text (str): Full generated text
-            formatted_prompt (str): The formatted prompt that was used
-
-        Returns:
-            str: Extracted response
-        """
-        # Remove the prompt from the beginning
-        if generated_text.startswith(formatted_prompt):
-            response = generated_text[len(formatted_prompt):].strip()
-        else:
-            # If the prompt isn't at the beginning (unusual), try to find the response part
-            response = generated_text.replace(formatted_prompt, "", 1).strip()
-
-        return response
+            self.logger.error(f"Error initializing Phi model: {str(e)}", exc_info=True)
+            self.logger.debug(f"Traceback: {traceback.format_exc()}")
+            raise RuntimeError(f"Failed to initialize Phi model: {str(e)}")
 
     def generate_response(self, prompt: str) -> str:
         """
-        Generate a response from the Phi model
+        Generate a response using Phi
 
         Args:
             prompt (str): Input prompt
@@ -232,82 +206,66 @@ class PhiClient(BaseLLMClient):
                 self.logger.error(error_msg)
                 return f"Error: {error_msg}"
 
-        # If initialization failed previously and we couldn't initialize now, return error
-        if not self._is_initialized:
-            return f"Error: Model not initialized. Previous error: {self._initialization_error}"
-
-        # Format prompt for Phi
-        formatted_prompt = self._format_prompt(prompt)
-
         # Apply rate limiting if enabled
         if self.rate_limiter is not None:
             rate_limit_start = time.time()
             token_cost = max(1, len(prompt) // 4)  # Estimate token count
+            fallback_on_rate_limit = self.model_config.get("fallback_on_rate_limit", True)
 
             self.logger.debug(f"Applying rate limiting with token cost: {token_cost}")
-            if not self.rate_limiter.bucket.consume(token_cost, wait=True):
-                self.logger.warning("Rate limit exceeded, request rejected")
-                self.rate_limited_count += 1
-                return "Error: Rate limit exceeded. Please try again later."
 
+            # Use the check_limit method to check if we're rate limited
+            if hasattr(self.rate_limiter, 'check_limit'):
+                if not self.rate_limiter.check_limit(token_cost, wait=False):
+                    self.rate_limited_count += 1
+                    self.logger.warning("Rate limit exceeded, request rejected")
+
+                    if fallback_on_rate_limit:
+                        self.logger.info("Using fallback mechanism for rate-limited request")
+                        return self._generate_fallback_response(prompt)
+                    else:
+                        return "Error: Rate limit exceeded. Please try again later."
+            else:
+                # Fallback to old method if check_limit doesn't exist
+                if not self.rate_limiter.bucket.consume(token_cost, wait=False):
+                    self.rate_limited_count += 1
+                    self.logger.warning("Rate limit exceeded, request rejected")
+
+                    if fallback_on_rate_limit:
+                        self.logger.info("Using fallback mechanism for rate-limited request")
+                        return self._generate_fallback_response(prompt)
+                    else:
+                        return "Error: Rate limit exceeded. Please try again later."
+
+            # Track wait time
             rate_limit_time = time.time() - rate_limit_start
             if rate_limit_time > 0.01:  # Only count significant waits
-                self.rate_limited_count += 1
                 self.rate_limited_wait_time += rate_limit_time
-                self.logger.info(f"Request rate limited, waited {rate_limit_time:.2f}s")
+                self.logger.debug(f"Rate limiting caused wait of {rate_limit_time:.2f}s")
 
         try:
-            # Tokenize input with optimized settings
-            inputs = self.tokenizer(formatted_prompt,
-                                   return_tensors="pt",
-                                   padding=True,
-                                   truncation=True,
-                                   max_length=self.model_config.get("max_input_length", 1024))
-
-            # Check if model is available
-            if self.model is None:
-                return "Error: Model not loaded properly"
-
-            # Move inputs to the same device as the model
-            inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
-            input_tokens = len(inputs.input_ids[0])
-
-            # Generate response
+            # Generate response using the text generation pipeline
+            self.logger.debug(f"Generating response for prompt: {prompt[:50]}...")
             start_time = time.time()
-
-            # Use inference mode for better performance
-            with torch.inference_mode():
-                outputs = self.model.generate(
-                    inputs.input_ids,
-                    max_new_tokens=self.max_new_tokens,
-                    temperature=self.temperature,
-                    top_p=self.top_p,
-                    repetition_penalty=self.repetition_penalty,
-                    do_sample=self.temperature > 0,
-                    pad_token_id=self.tokenizer.eos_token_id,
-                    # Performance optimizations
-                    use_cache=True,
-                    num_beams=self.model_config.get("num_beams", 1),
-                    early_stopping=True if self.model_config.get("num_beams", 1) > 1 else False
-                )
-
+            
+            # Format the prompt for Phi
+            formatted_prompt = self._format_prompt(prompt)
+            
+            # Generate text
+            outputs = self.text_generation_pipeline(
+                formatted_prompt,
+                return_full_text=False,
+                do_sample=True
+            )
+            
             generation_time = time.time() - start_time
+            
+            # Extract the generated text
+            response = outputs[0]['generated_text'].strip()
+            
+            self.logger.debug(f"Generated response in {generation_time:.2f}s")
 
-            # Decode response
-            generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-            # Extract only the response part
-            response = self._extract_response(generated_text, formatted_prompt)
-
-            # Update stats
-            self.total_generations += 1
-            self.total_tokens_generated += len(outputs[0]) - input_tokens
-            self.total_generation_time += generation_time
-
-            tokens_per_second = (len(outputs[0]) - input_tokens) / generation_time if generation_time > 0 else 0
-            self.logger.debug(f"Generated response in {generation_time:.2f}s ({len(outputs[0]) - input_tokens} tokens, {tokens_per_second:.1f} tokens/sec)")
-
-            # Cache the response if enabled
+            # Cache the response if caching is enabled
             if self.cache is not None:
                 self.cache.set(prompt, response)
 
@@ -315,9 +273,37 @@ class PhiClient(BaseLLMClient):
 
         except Exception as e:
             error_msg = f"Error generating response: {str(e)}"
-            self.logger.error(error_msg)
-            self.logger.debug(traceback.format_exc())
+            self.logger.error(error_msg, exc_info=True)
+            self.logger.debug(f"Traceback: {traceback.format_exc()}")
+
+            # Return error message
             return f"Error: {error_msg}"
+
+    def _format_prompt(self, prompt: str) -> str:
+        """
+        Format the prompt for Phi model
+
+        Args:
+            prompt (str): Input prompt
+
+        Returns:
+            str: Formatted prompt
+        """
+        # Simple formatting for Phi
+        return f"Instruction: {prompt}\nResponse:"
+
+    def _generate_fallback_response(self, prompt: str) -> str:
+        """
+        Generate a fallback response when rate limited
+
+        Args:
+            prompt (str): Input prompt
+
+        Returns:
+            str: Fallback response
+        """
+        # Simple fallback response
+        return "I'm currently experiencing high demand. Please try again in a moment."
 
     def batch_generate(self, prompts: List[str]) -> List[str]:
         """
@@ -330,72 +316,56 @@ class PhiClient(BaseLLMClient):
             List[str]: List of model responses
         """
         responses = []
-
         for prompt in prompts:
-            response = self.generate_response(prompt)
-            responses.append(response)
-
+            responses.append(self.generate_response(prompt))
         return responses
+
+    def get_model_info(self) -> Dict[str, Any]:
+        """
+        Get information about the model
+
+        Returns:
+            Dict[str, Any]: Model metadata
+        """
+        info = super().get_model_info()
+        info.update({
+            "model_type": "phi",
+            "is_initialized": self._is_initialized,
+            "cache_hits": self.cache_hits,
+            "rate_limited_count": self.rate_limited_count,
+            "rate_limited_wait_time": self.rate_limited_wait_time
+        })
+        return info
 
     def get_stats(self) -> Dict[str, Any]:
         """
-        Get usage statistics for the model
+        Get statistics about the client's performance
 
         Returns:
-            Dict[str, Any]: Usage statistics
+            Dict[str, Any]: Statistics
         """
-        avg_generation_time = 0
-        if self.total_generations > 0:
-            avg_generation_time = self.total_generation_time / self.total_generations
-
         stats = {
-            "total_generations": self.total_generations,
-            "total_tokens_generated": self.total_tokens_generated,
-            "average_generation_time": avg_generation_time,
-            "cache_hits": self.cache_hits,
             "model_id": self.model_config.get("model_id", "unknown"),
+            "model_type": "phi",
             "is_initialized": self._is_initialized,
-            "rate_limited_count": getattr(self, 'rate_limited_count', 0),
-            "rate_limited_wait_time": getattr(self, 'rate_limited_wait_time', 0.0)
+            "total_generations": 0,  # Will be updated if available
+            "cache_hits": self.cache_hits,
+            "rate_limited_count": self.rate_limited_count,
+            "rate_limited_wait_time": self.rate_limited_wait_time
         }
 
+        # Add cache stats if available
+        if self.cache is not None and hasattr(self.cache, "get_stats"):
+            cache_stats = self.cache.get_stats()
+            stats.update({
+                "cache_" + k: v for k, v in cache_stats.items()
+            })
+
         # Add rate limiter stats if available
-        if self.rate_limiter is not None:
-            rate_limiter_stats = self.rate_limiter.get_stats()
-            stats["rate_limiter"] = rate_limiter_stats
+        if self.rate_limiter is not None and hasattr(self.rate_limiter, "get_stats"):
+            rate_stats = self.rate_limiter.get_stats()
+            stats.update({
+                "rate_" + k: v for k, v in rate_stats.items()
+            })
 
         return stats
-
-    def cleanup(self):
-        """
-        Release resources used by the Phi model
-        """
-        if not self._is_initialized:
-            return
-
-        self.logger.info("Cleaning up Phi model resources")
-
-        try:
-            # Delete model and tokenizer
-            if hasattr(self, 'model') and self.model is not None:
-                del self.model
-                self.model = None
-
-            if hasattr(self, 'tokenizer') and self.tokenizer is not None:
-                del self.tokenizer
-                self.tokenizer = None
-
-            # Force garbage collection
-            import gc
-            gc.collect()
-
-            # Clear CUDA cache if available
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-
-            self._is_initialized = False
-            self.logger.info("Phi model resources cleaned up successfully")
-
-        except Exception as e:
-            self.logger.error(f"Error cleaning up Phi model: {str(e)}")
-            self.logger.debug(traceback.format_exc())

@@ -36,8 +36,8 @@ DEFAULT_CONFIG = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "level": "INFO",
-            "formatter": "standard",
+            "level": "DEBUG",  # Changed from INFO to DEBUG
+            "formatter": "detailed",  # Changed from standard to detailed
             "stream": "ext://sys.stdout"
         },
         "file": {
@@ -62,7 +62,7 @@ DEFAULT_CONFIG = {
     "loggers": {
         "": {  # Root logger
             "handlers": ["console", "file", "json_file"],
-            "level": "INFO",
+            "level": "DEBUG",  # Changed from INFO to DEBUG
             "propagate": True
         },
         "core": {
@@ -81,7 +81,7 @@ DEFAULT_CONFIG = {
             "level": "DEBUG",
             "propagate": True
         },
-        # Third-party modules
+        # Third-party modules - keep these at WARNING to avoid excessive logs
         "urllib3": {
             "level": "WARNING",
             "propagate": True
