@@ -110,6 +110,7 @@ venv.bak/
 logs/
 cache/
 temp/
+test_results/
 *.csv
 *.xlsx
 *.pdf
