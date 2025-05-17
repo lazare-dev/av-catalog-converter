@@ -117,8 +117,10 @@ Analyze a catalog file structure without full processing.
 **Request:**
 - Content-Type: `multipart/form-data`
 - Body:
-  - `file`: The catalog file to analyze (required)
-  - `job_id`: Optional job ID for tracking (optional)
+  - `file`: The catalog file to analyze (required if job_id is not provided)
+  - `job_id`: Job ID from a previous upload (required if file is not provided)
+
+**Note:** You must provide either a file or a job_id. If both are provided, the job_id will be used if valid.
 
 **Response:**
 ```json
@@ -165,12 +167,17 @@ Analyze a catalog file structure without full processing.
 - `413 Payload Too Large`: File too large
 - `500 Internal Server Error`: Analysis error
 
-**Example using cURL:**
+**Example using cURL with file upload:**
 ```bash
 curl -X POST -F "file=@path/to/your/catalog.csv" http://localhost:8080/api/analyze
 ```
 
-**Example using Python:**
+**Example using cURL with job_id:**
+```bash
+curl -X POST -F "job_id=550e8400-e29b-41d4-a716-446655440000" http://localhost:8080/api/analyze
+```
+
+**Example using Python with file upload:**
 ```python
 import requests
 
@@ -178,6 +185,24 @@ url = "http://localhost:8080/api/analyze"
 files = {"file": open("path/to/your/catalog.csv", "rb")}
 
 response = requests.post(url, files=files)
+
+if response.status_code == 200:
+    analysis = response.json()
+    print(f"File has {analysis['structure']['row_count']} rows and {analysis['structure']['column_count']} columns")
+    print(f"Product count: {analysis['file_info']['product_count']}")
+    print(f"Job ID: {analysis['job_id']}")
+else:
+    print(f"Error: {response.json().get('error')}")
+```
+
+**Example using Python with job_id:**
+```python
+import requests
+
+url = "http://localhost:8080/api/analyze"
+data = {"job_id": "550e8400-e29b-41d4-a716-446655440000"}
+
+response = requests.post(url, data=data)
 
 if response.status_code == 200:
     analysis = response.json()

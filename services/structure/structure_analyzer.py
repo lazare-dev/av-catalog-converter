@@ -465,8 +465,18 @@ class StructureAnalyzer:
         self.logger.info("Performing AI-based structure analysis")
 
         try:
-            # Prepare a sample of the data for the model - include more rows for better context
-            sample_rows = min(25, len(data))
+            # Check if we have too many columns for a single analysis
+            column_count = len(data.columns)
+            self.logger.info(f"Analyzing structure with {column_count} columns")
+
+            # If we have more than 8 columns, use the chunked analysis approach to handle token limits
+            if column_count > 8:
+                self.logger.warning(f"Large number of columns ({column_count}), using chunked analysis to handle token limits")
+                return self._perform_chunked_analysis(data, basic_analysis)
+
+            # For smaller datasets, use the full AI analysis
+            # Prepare a sample of the data for the model - include fewer rows to reduce token count
+            sample_rows = min(5, len(data))  # Reduced from 10 to 5 to further reduce token count
             data_sample = data.head(sample_rows).fillna("").to_string(index=False)
 
             # Get columns with their types and examples
@@ -475,7 +485,7 @@ class StructureAnalyzer:
                 # Include more detailed information for each column
                 column_info[col] = {
                     "type": info["type"],
-                    "samples": info.get("sample_values", []),
+                    "samples": info.get("sample_values", [])[:1],  # Limit to 1 sample to reduce tokens
                     "unique_ratio": info.get("unique_ratio", 0),
                     "empty_ratio": info.get("empty_ratio", 0) if "empty_ratio" in info else 0,
                     "pattern": info.get("pattern", "")
@@ -494,8 +504,23 @@ class StructureAnalyzer:
                 data_quality=data_quality
             )
 
+            # Estimate token count
+            estimated_tokens = len(prompt) // 4  # Rough estimate: 4 chars per token
+            self.logger.info(f"Estimated token count for structure analysis: {estimated_tokens}")
+
+            # If the prompt is likely to exceed token limits, use chunked analysis
+            if estimated_tokens > 400:  # Conservative threshold below DistilBERT's 512 limit
+                self.logger.warning(f"Prompt may exceed token limits ({estimated_tokens} estimated tokens), using chunked analysis")
+                return self._perform_chunked_analysis(data, basic_analysis)
+
             # Get response from LLM with a longer timeout for complex analysis
+            self.logger.info("Sending prompt to LLM for structure analysis")
             response = self.llm_client.generate_response(prompt)
+
+            # Check if the response indicates a fallback was used
+            if "fallback" in response.lower() and "token limit" in response.lower():
+                self.logger.warning("LLM used fallback due to token limits, using chunked analysis")
+                return self._perform_chunked_analysis(data, basic_analysis)
 
             # Parse the response (expecting JSON format)
             ai_analysis = self._parse_ai_response(response)
@@ -510,11 +535,13 @@ class StructureAnalyzer:
             self.logger.error(f"Error in AI structure analysis: {str(e)}")
             self.logger.debug(f"Raw response: {response if 'response' in locals() else 'No response generated'}")
 
-            # Check if this is a rate limiting error
+            # Check if this is a token limit error or rate limiting error
             error_str = str(e).lower()
-            if 'rate limit' in error_str or 'rate_limit' in error_str:
-                self.logger.warning("Rate limit error detected, using fallback analysis")
-                return self._generate_fallback_analysis(data, basic_analysis)
+            if ('token' in error_str and ('limit' in error_str or 'exceed' in error_str or 'length' in error_str or 'sequence' in error_str)) or ('rate limit' in error_str or 'rate_limit' in error_str):
+                self.logger.warning(f"Token limit or rate limit error detected: {str(e)}")
+                self.logger.info("Using chunked analysis approach")
+                # Use the chunked analysis approach
+                return self._perform_chunked_analysis(data, basic_analysis)
 
             # Return a minimal valid structure to avoid downstream errors
             return {
@@ -524,6 +551,342 @@ class StructureAnalyzer:
                 "possible_field_mappings": {},
                 "data_quality_issues": ["AI analysis failed: " + str(e)]
             }
+
+    def _perform_chunked_analysis(self, data, basic_analysis):
+        """
+        Perform analysis in chunks to handle large inputs that would exceed token limits
+
+        Args:
+            data (pd.DataFrame): Input data
+            basic_analysis (Dict): Basic analysis results
+
+        Returns:
+            Dict[str, Any]: Combined analysis results from all chunks
+        """
+        self.logger.info("Performing chunked structure analysis to handle token limits")
+
+        # Initialize the combined analysis
+        combined_analysis = {
+            "column_analysis": {},
+            "structure_notes": "Generated by chunked analysis to handle large input",
+            "possible_field_mappings": {},
+            "data_quality_issues": []
+        }
+
+        # Process columns in smaller batches to avoid token limits
+        all_columns = list(data.columns)
+
+        # Determine optimal chunk size based on column count
+        if len(all_columns) > 20:
+            chunk_size = 3  # Very small chunks for very large inputs
+        elif len(all_columns) > 12:
+            chunk_size = 4  # Small chunks for large inputs
+        else:
+            chunk_size = 5  # Default chunk size
+
+        self.logger.info(f"Using chunk size of {chunk_size} columns")
+
+        # Split columns into batches
+        column_batches = []
+        for i in range(0, len(all_columns), chunk_size):
+            batch = all_columns[i:i+chunk_size]
+            column_batches.append(batch)
+
+        self.logger.info(f"Split {len(all_columns)} columns into {len(column_batches)} batches")
+
+        # Process each batch separately
+        for batch_idx, column_batch in enumerate(column_batches):
+            self.logger.info(f"Processing batch {batch_idx+1}/{len(column_batches)} with {len(column_batch)} columns")
+
+            # Create a subset of the data with only the columns in this batch
+            batch_data = data[column_batch].copy()
+
+            # Create a simplified prompt for this batch
+            batch_column_info = {}
+            for col in column_batch:
+                if col in basic_analysis["column_types"]:
+                    info = basic_analysis["column_types"][col]
+                    batch_column_info[col] = {
+                        "type": info["type"],
+                        "samples": info.get("sample_values", [])[:1],  # Limit to 1 sample
+                        "unique_ratio": info.get("unique_ratio", 0)
+                    }
+
+            # Skip empty batches
+            if not batch_column_info:
+                self.logger.warning(f"Batch {batch_idx+1} has no valid columns, skipping")
+                continue
+
+            # Prepare a small sample of the data
+            sample_rows = min(3, len(batch_data))
+            data_sample = batch_data.head(sample_rows).fillna("").to_string(index=False)
+
+            # Generate a simplified prompt for this batch
+            prompt = get_structure_analysis_prompt(
+                data_sample=data_sample,
+                column_info=batch_column_info,
+                header_info=basic_analysis["header_info"],
+                data_quality={}  # Simplified data quality to reduce tokens
+            )
+
+            # Try to get analysis for this batch
+            try:
+                self.logger.info(f"Sending prompt for batch {batch_idx+1} to LLM")
+                batch_response = self.llm_client.generate_response(prompt)
+
+                # Parse the response
+                batch_analysis = self._parse_ai_response(batch_response)
+
+                # Merge the batch analysis into the combined analysis
+                if "column_analysis" in batch_analysis:
+                    combined_analysis["column_analysis"].update(batch_analysis["column_analysis"])
+
+                if "possible_field_mappings" in batch_analysis:
+                    combined_analysis["possible_field_mappings"].update(batch_analysis["possible_field_mappings"])
+
+                if "data_quality_issues" in batch_analysis:
+                    combined_analysis["data_quality_issues"].extend(batch_analysis["data_quality_issues"])
+
+                self.logger.info(f"Successfully processed batch {batch_idx+1}")
+
+            except Exception as e:
+                self.logger.error(f"Error processing batch {batch_idx+1}: {str(e)}")
+                # If AI analysis fails, use heuristics for this batch
+                batch_mappings = self._suggest_mappings_for_batch(batch_column_info, basic_analysis)
+                combined_analysis["possible_field_mappings"].update(batch_mappings)
+
+                # Add simple column analysis
+                for col in column_batch:
+                    if col in basic_analysis["column_types"]:
+                        col_type = basic_analysis["column_types"][col]["type"]
+                        combined_analysis["column_analysis"][col] = {
+                            "type": col_type,
+                            "confidence": 0.7,
+                            "description": f"Column '{col}' appears to contain {col_type} data"
+                        }
+
+        # Add data quality issues
+        missing_values = basic_analysis.get("data_quality", {}).get("missing_values", {})
+        for col, info in missing_values.items():
+            if isinstance(info, dict) and "count" in info:
+                count = info["count"]
+                if count > 0:
+                    ratio = count / len(data) if len(data) > 0 else 0
+                    if ratio > 0.1:  # More than 10% missing
+                        combined_analysis["data_quality_issues"].append(
+                            f"Column '{col}' has {ratio:.1%} missing values"
+                        )
+            elif isinstance(info, (int, float)) and info > 0:
+                ratio = info / len(data) if len(data) > 0 else 0
+                if ratio > 0.1:  # More than 10% missing
+                    combined_analysis["data_quality_issues"].append(
+                        f"Column '{col}' has {ratio:.1%} missing values"
+                    )
+
+        # Add structure notes
+        combined_analysis["structure_notes"] = (
+            "This analysis was generated using a chunked approach to handle the large number of columns. "
+            f"The data contains {len(data)} rows and {len(data.columns)} columns. "
+            f"Identified {len(combined_analysis['possible_field_mappings'])} possible field mappings."
+        )
+
+        # Ensure all required fields have mappings if possible
+        for field in ["SKU", "Short Description", "Manufacturer", "Trade Price"]:
+            if field not in combined_analysis["possible_field_mappings"]:
+                self._suggest_mapping_for_required_field(field, combined_analysis, basic_analysis)
+
+        self.logger.info(f"Chunked analysis complete with {len(combined_analysis['possible_field_mappings'])} mappings")
+        return combined_analysis
+
+    def _perform_simplified_analysis(self, data, basic_analysis):
+        """
+        Perform a simplified analysis for large inputs that would exceed token limits
+
+        Args:
+            data (pd.DataFrame): Input data
+            basic_analysis (Dict): Basic analysis results
+
+        Returns:
+            Dict[str, Any]: Simplified analysis results
+        """
+        self.logger.info("Performing simplified structure analysis to avoid token limits")
+
+        # Initialize the simplified analysis
+        simplified_analysis = {
+            "column_analysis": {},
+            "structure_notes": "Generated by simplified analysis due to large input size",
+            "possible_field_mappings": {},
+            "data_quality_issues": []
+        }
+
+        # Process columns in smaller batches to avoid token limits
+        all_columns = list(data.columns)
+        column_batches = []
+
+        # Split columns into batches of 5
+        for i in range(0, len(all_columns), 5):
+            batch = all_columns[i:i+5]
+            column_batches.append(batch)
+
+        self.logger.info(f"Split {len(all_columns)} columns into {len(column_batches)} batches")
+
+        # Process each batch separately
+        for batch_idx, column_batch in enumerate(column_batches):
+            self.logger.info(f"Processing batch {batch_idx+1}/{len(column_batches)} with {len(column_batch)} columns")
+
+            # Create a simplified prompt for this batch
+            batch_column_info = {}
+            for col in column_batch:
+                if col in basic_analysis["column_types"]:
+                    info = basic_analysis["column_types"][col]
+                    batch_column_info[col] = {
+                        "type": info["type"],
+                        "samples": info.get("sample_values", [])[:2],  # Limit to 2 samples
+                        "unique_ratio": info.get("unique_ratio", 0)
+                    }
+
+            # Skip empty batches
+            if not batch_column_info:
+                self.logger.warning(f"Batch {batch_idx+1} has no valid columns, skipping")
+                continue
+
+            # Use heuristics to suggest mappings for this batch
+            batch_mappings = self._suggest_mappings_for_batch(batch_column_info, basic_analysis)
+
+            # Add the batch mappings to the overall mappings
+            simplified_analysis["possible_field_mappings"].update(batch_mappings)
+
+            # Add column analysis for this batch
+            for col, info in batch_column_info.items():
+                simplified_analysis["column_analysis"][col] = {
+                    "type": info["type"],
+                    "confidence": 0.7,
+                    "description": f"Column '{col}' appears to contain {info['type']} data"
+                }
+
+        # Add data quality issues
+        missing_values = basic_analysis.get("data_quality", {}).get("missing_values", {})
+        for col, count in missing_values.items():
+            if count > 0:
+                ratio = count / len(data) if len(data) > 0 else 0
+                if ratio > 0.1:  # More than 10% missing
+                    simplified_analysis["data_quality_issues"].append(
+                        f"Column '{col}' has {ratio:.1%} missing values"
+                    )
+
+        # Add structure notes
+        simplified_analysis["structure_notes"] = (
+            "This analysis was generated using a simplified approach due to the large number of columns. "
+            f"The data contains {len(data)} rows and {len(data.columns)} columns. "
+            f"Identified {len(simplified_analysis['possible_field_mappings'])} possible field mappings."
+        )
+
+        # Ensure all required fields have mappings if possible
+        for field in ["SKU", "Short Description", "Manufacturer", "Trade Price"]:
+            if field not in simplified_analysis["possible_field_mappings"]:
+                self._suggest_mapping_for_required_field(field, simplified_analysis, basic_analysis)
+
+        self.logger.info(f"Simplified analysis complete with {len(simplified_analysis['possible_field_mappings'])} mappings")
+        return simplified_analysis
+
+    def _suggest_mappings_for_batch(self, batch_column_info, _):
+        """
+        Suggest mappings for a batch of columns using heuristics
+
+        Args:
+            batch_column_info (Dict): Column information for this batch
+            _ (Dict): Unused parameter (kept for consistency)
+
+        Returns:
+            Dict[str, Dict]: Suggested mappings for this batch
+        """
+        batch_mappings = {}
+
+        # Apply heuristics to each column
+        for col, info in batch_column_info.items():
+            col_type = info["type"]
+            lower_col = col.lower()
+
+            # SKU/ID fields
+            if col_type in ["id", "string"] and any(term in lower_col for term in ["sku", "id", "code", "product"]):
+                batch_mappings["SKU"] = {
+                    "column": col,
+                    "confidence": 0.7,
+                    "reasoning": "Column name and type suggest it contains product identifiers"
+                }
+
+            # Description fields
+            elif col_type in ["string", "text"] and any(term in lower_col for term in ["desc", "name", "title", "product"]):
+                if "short" in lower_col or "name" in lower_col or "title" in lower_col:
+                    batch_mappings["Short Description"] = {
+                        "column": col,
+                        "confidence": 0.7,
+                        "reasoning": "Column name suggests it contains short product descriptions"
+                    }
+                elif "long" in lower_col or "full" in lower_col:
+                    batch_mappings["Long Description"] = {
+                        "column": col,
+                        "confidence": 0.7,
+                        "reasoning": "Column name suggests it contains detailed product descriptions"
+                    }
+
+            # Price fields
+            elif col_type in ["price", "numeric", "decimal", "float"] and any(term in lower_col for term in ["price", "cost", "msrp", "rrp"]):
+                if "trade" in lower_col or "wholesale" in lower_col:
+                    batch_mappings["Trade Price"] = {
+                        "column": col,
+                        "confidence": 0.7,
+                        "reasoning": "Column name suggests it contains trade/wholesale prices"
+                    }
+                elif "msrp" in lower_col or "rrp" in lower_col:
+                    if "gbp" in lower_col or "£" in lower_col or "pound" in lower_col:
+                        batch_mappings["MSRP GBP"] = {
+                            "column": col,
+                            "confidence": 0.8,
+                            "reasoning": "Column name suggests it contains GBP retail prices"
+                        }
+                    elif "usd" in lower_col or "$" in lower_col or "dollar" in lower_col:
+                        batch_mappings["MSRP USD"] = {
+                            "column": col,
+                            "confidence": 0.8,
+                            "reasoning": "Column name suggests it contains USD retail prices"
+                        }
+                    elif "eur" in lower_col or "€" in lower_col or "euro" in lower_col:
+                        batch_mappings["MSRP EUR"] = {
+                            "column": col,
+                            "confidence": 0.8,
+                            "reasoning": "Column name suggests it contains EUR retail prices"
+                        }
+                    else:
+                        batch_mappings["MSRP GBP"] = {
+                            "column": col,
+                            "confidence": 0.6,
+                            "reasoning": "Column appears to contain retail prices"
+                        }
+                elif "buy" in lower_col or "cost" in lower_col:
+                    batch_mappings["Buy Cost"] = {
+                        "column": col,
+                        "confidence": 0.7,
+                        "reasoning": "Column name suggests it contains buy/cost prices"
+                    }
+
+            # Manufacturer fields
+            elif col_type in ["string", "text"] and any(term in lower_col for term in ["manuf", "brand", "make", "vendor"]):
+                batch_mappings["Manufacturer"] = {
+                    "column": col,
+                    "confidence": 0.8,
+                    "reasoning": "Column name suggests it contains manufacturer information"
+                }
+
+            # Unit of Measure fields
+            elif col_type in ["string", "text"] and any(term in lower_col for term in ["unit", "uom", "measure"]):
+                batch_mappings["Unit Of Measure"] = {
+                    "column": col,
+                    "confidence": 0.8,
+                    "reasoning": "Column name suggests it contains unit of measure information"
+                }
+
+        return batch_mappings
 
     def _parse_ai_response(self, response: str) -> Dict[str, Any]:
         """

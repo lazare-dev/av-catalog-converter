@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Field Mapping - AV Catalog Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .mapping-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .mapping-table th, .mapping-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .mapping-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .mapping-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .mapping-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .required {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .validation-error {
+            color: #e74c3c;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .validation-success {
+            color: #2ecc71;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .button-secondary {
+            background-color: #95a5a6;
+        }
+        .button-secondary:hover {
+            background-color: #7f8c8d;
+        }
+        .button-success {
+            background-color: #2ecc71;
+        }
+        .button-success:hover {
+            background-color: #27ae60;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .sample-data {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .confidence {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+        .high-confidence {
+            color: #2ecc71;
+        }
+        .medium-confidence {
+            color: #f39c12;
+        }
+        .low-confidence {
+            color: #e74c3c;
+        }
+        .nav-links {
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Field Mapping</h1>
+
+        <div class="nav-links">
+            <a href="/" class="button button-secondary">&larr; Back to Home</a>
+        </div>
+
+        <div class="section">
+            <h2>Review and Edit Field Mappings</h2>
+            <p>The system has automatically mapped your catalog fields to our standard schema. Please review and adjust the mappings as needed.</p>
+
+            <form id="mapping-form" action="/api/validate-mapping" method="post">
+                <input type="hidden" id="job-id" name="job_id" value="{{job_id}}">
+
+                <table class="mapping-table">
+                    <thead>
+                        <tr>
+                            <th>Standard Field</th>
+                            <th>Source Column</th>
+                            <th>Sample Data</th>
+                            <th>Required</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mapping-tbody">
+                        <!-- This will be populated by JavaScript -->
+                    </tbody>
+                </table>
+
+                <div class="form-group">
+                    <button type="submit" class="button button-success">Validate and Process</button>
+                    <button type="button" class="button" id="reset-mappings">Reset to Suggested Mappings</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="section" id="validation-results" style="display: none;">
+            <h2>Validation Results</h2>
+            <div id="validation-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Store the original mappings for reset functionality
+        let originalMappings = {};
+        let sourceColumns = [];
+        let sampleData = {};
+        let requiredFields = ["SKU", "Short Description", "Manufacturer"]; // Default, will be updated from server
+
+        // Initialize empty data structures to prevent null reference errors
+        function initializeEmptyData() {
+            console.log('Initializing empty data structures');
+            sourceColumns = [];
+            sampleData = {};
+            originalMappings = {};
+            requiredFields = ["SKU", "Short Description", "Manufacturer"];
+        }
+
+        // Call initialization immediately
+        initializeEmptyData();
+
+        // Function to initialize the page with data from the server
+        function initializePage(data) {
+            console.log('Initializing page with data:', data);
+
+            // Validate data
+            if (!data) {
+                console.error('No data provided to initializePage');
+                data = {}; // Use empty object to prevent errors
+            }
+
+            // Store the original mappings
+            originalMappings = data.mappings || {};
+            sourceColumns = data.source_columns || [];
+
+            // Process sample data to ensure it's valid
+            if (!data.sample_data) {
+                console.warn('No sample data provided, using empty object');
+                sampleData = {};
+            } else if (typeof data.sample_data !== 'object') {
+                console.error('Sample data is not an object:', typeof data.sample_data);
+                sampleData = {};
+            } else {
+                // Create a new object to avoid reference issues
+                sampleData = {};
+
+                // Process each column's sample data
+                for (const column of sourceColumns) {
+                    try {
+                        if (!(column in data.sample_data)) {
+                            console.warn(`Column ${column} not found in sample data, adding empty array`);
+                            sampleData[column] = ['No sample data available'];
+                        } else {
+                            const columnData = data.sample_data[column];
+
+                            // Handle null or undefined data
+                            if (columnData === null || columnData === undefined) {
+                                console.warn(`Sample data for column ${column} is null or undefined, using placeholder`);
+                                sampleData[column] = ['No sample data available'];
+                            }
+                            // Handle array data
+                            else if (Array.isArray(columnData)) {
+                                if (columnData.length === 0) {
+                                    console.warn(`Sample data array for column ${column} is empty, adding placeholder`);
+                                    sampleData[column] = ['No sample data available'];
+                                } else {
+                                    // Ensure all array items are strings or simple values
+                                    sampleData[column] = columnData.map(item => {
+                                        if (item === null || item === undefined) {
+                                            return 'null';
+                                        } else if (typeof item === 'object') {
+                                            try {
+                                                return JSON.stringify(item);
+                                            } catch (e) {
+                                                return String(item);
+                                            }
+                                        } else {
+                                            return String(item);
+                                        }
+                                    });
+                                }
+                            }
+                            // Handle object data (convert to string)
+                            else if (typeof columnData === 'object') {
+                                try {
+                                    sampleData[column] = [JSON.stringify(columnData)];
+                                } catch (e) {
+                                    console.warn(`Error stringifying object data for column ${column}:`, e);
+                                    sampleData[column] = ['[Complex object]'];
+                                }
+                            }
+                            // Handle primitive data types
+                            else {
+                                sampleData[column] = [String(columnData)];
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error processing sample data for column ${column}:`, error);
+                        sampleData[column] = ['Error processing sample data'];
+                    }
+                }
+            }
+
+            console.log('Processed sample data:', sampleData);
+
+            // Update required fields if provided
+            if (data.required_fields) {
+                requiredFields = data.required_fields;
+            }
+
+            // Populate the mapping table
+            populateMappingTable();
+        }
+
+        // Function to populate the mapping table
+        function populateMappingTable() {
+            console.log("Populating mapping table");
+            console.log("Original mappings:", originalMappings);
+            console.log("Source columns:", sourceColumns);
+            console.log("Sample data keys:", Object.keys(sampleData));
+            console.log("Required fields:", requiredFields);
+
+            try {
+                const tbody = document.getElementById('mapping-tbody');
+                if (!tbody) {
+                    console.error("Could not find mapping-tbody element");
+                    throw new Error("Could not find mapping-tbody element");
+                }
+
+                tbody.innerHTML = '';
+
+                // Standard fields in the correct order
+                const standardFields = [
+                    "SKU", "Short Description", "Long Description", "Model",
+                    "Category Group", "Category", "Manufacturer", "Manufacturer SKU",
+                    "Image URL", "Document Name", "Document URL", "Unit Of Measure",
+                    "Buy Cost", "Trade Price", "MSRP GBP", "MSRP USD", "MSRP EUR", "Discontinued"
+                ];
+
+                // Validate source columns
+                if (!Array.isArray(sourceColumns) || sourceColumns.length === 0) {
+                    console.error("Source columns is not a valid array:", sourceColumns);
+                    throw new Error("No source columns available for mapping");
+                }
+
+                // Create the table rows
+                standardFields.forEach(field => {
+                    try {
+                        const row = document.createElement('tr');
+
+                        // Standard field name
+                        const fieldCell = document.createElement('td');
+                        fieldCell.textContent = field;
+                        if (requiredFields.includes(field)) {
+                            fieldCell.innerHTML = `${field} <span class="required">*</span>`;
+                        }
+                        row.appendChild(fieldCell);
+
+                        // Source column dropdown
+                        const sourceCell = document.createElement('td');
+                        const select = document.createElement('select');
+                        select.name = `mapping[${field}]`;
+                        select.id = `mapping-${field}`;
+
+                        // Add empty option
+                        const emptyOption = document.createElement('option');
+                        emptyOption.value = '';
+                        emptyOption.textContent = '-- Select Source Column --';
+                        select.appendChild(emptyOption);
+
+                        // Add all source columns
+                        sourceColumns.forEach(column => {
+                            const option = document.createElement('option');
+                            option.value = column;
+                            option.textContent = column;
+                            if (originalMappings[field] === column) {
+                                option.selected = true;
+                            }
+                            select.appendChild(option);
+                        });
+
+                        sourceCell.appendChild(select);
+                        row.appendChild(sourceCell);
+
+                        // Sample data
+                        const sampleCell = document.createElement('td');
+                        sampleCell.className = 'sample-data';
+                        sampleCell.id = `sample-${field}`;
+
+                        // Update sample data when selection changes
+                        select.addEventListener('change', function() {
+                            updateSampleData(field, this.value);
+                        });
+
+                        // Initialize with current mapping
+                        if (originalMappings[field]) {
+                            updateSampleData(field, originalMappings[field]);
+                        }
+
+                        row.appendChild(sampleCell);
+
+                        // Required field
+                        const requiredCell = document.createElement('td');
+                        requiredCell.textContent = requiredFields.includes(field) ? 'Yes' : 'No';
+                        row.appendChild(requiredCell);
+
+                        tbody.appendChild(row);
+                    } catch (error) {
+                        console.error(`Error creating row for field ${field}:`, error);
+                        // Continue with the next field instead of breaking the entire table
+                    }
+                });
+
+                console.log("Mapping table populated successfully");
+            } catch (error) {
+                console.error("Error populating mapping table:", error);
+                // Show error message on the page
+                const container = document.querySelector('.container');
+                if (container) {
+                    container.innerHTML += `
+                        <div class="section">
+                            <h2>Error Creating Mapping Table</h2>
+                            <p>There was an error creating the mapping table: ${error.message}</p>
+                            <p>Please try refreshing the page or uploading a different file.</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Function to update sample data display
+        function updateSampleData(field, sourceColumn) {
+            const sampleCell = document.getElementById(`sample-${field}`);
+            if (!sampleCell) {
+                console.error(`Sample cell for field ${field} not found`);
+                return;
+            }
+
+            try {
+                // Set a default empty value
+                sampleCell.textContent = '[No data]';
+
+                // First check if sourceColumn is valid
+                if (!sourceColumn) {
+                    console.log(`No source column selected for field ${field}`);
+                    return;
+                }
+
+                // Log the sample data for debugging
+                console.log(`Updating sample data for field ${field} with column ${sourceColumn}`);
+
+                // Defensive check for sampleData
+                if (!sampleData) {
+                    console.error('sampleData is not defined or null');
+                    sampleData = {}; // Initialize to empty object to prevent further errors
+                    return;
+                }
+
+                console.log(`Sample data available:`, sourceColumn in sampleData);
+
+                // Check if sample data exists for this column
+                if (!(sourceColumn in sampleData)) {
+                    console.warn(`No sample data found for column: ${sourceColumn}`);
+                    sampleCell.textContent = '[No sample data available]';
+                    return;
+                }
+
+                // Get the sample data
+                const data = sampleData[sourceColumn];
+                console.log(`Sample data type for ${sourceColumn}:`, typeof data, data);
+
+                // Handle null or undefined data
+                if (data === null || data === undefined) {
+                    console.warn(`Sample data for ${sourceColumn} is null or undefined`);
+                    sampleCell.textContent = '[Empty data]';
+                    return;
+                }
+
+                // Handle array data
+                if (Array.isArray(data)) {
+                    try {
+                        // Filter out null, undefined, and empty strings
+                        const validData = data.filter(item => item !== null && item !== undefined && item !== '');
+                        if (validData.length > 0) {
+                            // Convert all items to strings to ensure they can be joined
+                            const safeData = validData.map(item => {
+                                if (typeof item === 'object') {
+                                    try {
+                                        return JSON.stringify(item);
+                                    } catch (e) {
+                                        return String(item);
+                                    }
+                                }
+                                return String(item);
+                            });
+
+                            // Limit the display length to prevent overflow
+                            const displayText = safeData.join(', ');
+                            if (displayText.length > 100) {
+                                sampleCell.textContent = displayText.substring(0, 97) + '...';
+                                // Add title for hover tooltip with full text
+                                sampleCell.title = displayText;
+                            } else {
+                                sampleCell.textContent = displayText;
+                            }
+                        } else {
+                            sampleCell.textContent = '[No valid sample data]';
+                        }
+                    } catch (error) {
+                        console.error(`Error processing array data for ${sourceColumn}:`, error);
+                        sampleCell.textContent = '[Error displaying sample data]';
+                    }
+                    return;
+                }
+
+                // Handle string data
+                if (typeof data === 'string') {
+                    if (data.trim() === '') {
+                        sampleCell.textContent = '[Empty string]';
+                    } else {
+                        // Limit the display length to prevent overflow
+                        if (data.length > 100) {
+                            sampleCell.textContent = data.substring(0, 97) + '...';
+                            // Add title for hover tooltip with full text
+                            sampleCell.title = data;
+                        } else {
+                            sampleCell.textContent = data;
+                        }
+                    }
+                    return;
+                }
+
+                // Handle other types of data (objects, numbers, etc.)
+                const stringValue = String(data);
+                if (stringValue.length > 100) {
+                    sampleCell.textContent = stringValue.substring(0, 97) + '...';
+                    sampleCell.title = stringValue;
+                } else {
+                    sampleCell.textContent = stringValue;
+                }
+            } catch (error) {
+                console.error(`Error updating sample data for ${field} with column ${sourceColumn}:`, error);
+                sampleCell.textContent = 'Error displaying sample data';
+            }
+        }
+
+        // Reset mappings button
+        document.getElementById('reset-mappings').addEventListener('click', function() {
+            // Reset to original mappings
+            Object.entries(originalMappings).forEach(([field, column]) => {
+                const select = document.getElementById(`mapping-${field}`);
+                if (select) {
+                    select.value = column;
+                    updateSampleData(field, column);
+                }
+            });
+        });
+
+        // Form submission
+        document.getElementById('mapping-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Collect the current mappings
+            const mappings = {};
+            const standardFields = [
+                "SKU", "Short Description", "Long Description", "Model",
+                "Category Group", "Category", "Manufacturer", "Manufacturer SKU",
+                "Image URL", "Document Name", "Document URL", "Unit Of Measure",
+                "Buy Cost", "Trade Price", "MSRP GBP", "MSRP USD", "MSRP EUR", "Discontinued"
+            ];
+
+            standardFields.forEach(field => {
+                const select = document.getElementById(`mapping-${field}`);
+                if (select && select.value) {
+                    mappings[field] = select.value;
+                }
+            });
+
+            // Send to validation endpoint
+            fetch('/api/validate-mapping', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    job_id: document.getElementById('job-id').value,
+                    mappings: mappings
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display validation results
+                displayValidationResults(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while validating the mappings.');
+            });
+        });
+
+        // Function to display validation results
+        function displayValidationResults(data) {
+            const validationDiv = document.getElementById('validation-results');
+            const contentDiv = document.getElementById('validation-content');
+
+            validationDiv.style.display = 'block';
+
+            if (data.success) {
+                contentDiv.innerHTML = `
+                    <div class="validation-success">
+                        <p>✅ Validation successful! Your mappings are valid.</p>
+                        <p>Click the button below to process your file with these mappings.</p>
+                        <button id="process-button" class="button button-success">Process File</button>
+                    </div>
+                `;
+
+                // Add event listener for process button
+                document.getElementById('process-button').addEventListener('click', function() {
+                    processFile(data.job_id);
+                });
+            } else {
+                let errorHtml = '<div class="validation-error"><p>❌ Validation failed. Please fix the following issues:</p><ul>';
+
+                if (data.issues.missing_required && data.issues.missing_required.length > 0) {
+                    errorHtml += '<li>Missing required fields: ' + data.issues.missing_required.join(', ') + '</li>';
+                }
+
+                if (data.issues.unknown_fields && data.issues.unknown_fields.length > 0) {
+                    errorHtml += '<li>Unknown target fields: ' + data.issues.unknown_fields.join(', ') + '</li>';
+                }
+
+                if (data.issues.duplicate_mappings && data.issues.duplicate_mappings.length > 0) {
+                    errorHtml += '<li>Duplicate mappings: ' + data.issues.duplicate_mappings.join(', ') + '</li>';
+                }
+
+                errorHtml += '</ul></div>';
+                contentDiv.innerHTML = errorHtml;
+            }
+        }
+
+        // Function to process the file with validated mappings
+        function processFile(jobId) {
+            // Collect the current mappings
+            const mappings = {};
+            const standardFields = [
+                "SKU", "Short Description", "Long Description", "Model",
+                "Category Group", "Category", "Manufacturer", "Manufacturer SKU",
+                "Image URL", "Document Name", "Document URL", "Unit Of Measure",
+                "Buy Cost", "Trade Price", "MSRP GBP", "MSRP USD", "MSRP EUR", "Discontinued"
+            ];
+
+            standardFields.forEach(field => {
+                const select = document.getElementById(`mapping-${field}`);
+                if (select && select.value) {
+                    mappings[field] = select.value;
+                }
+            });
+
+            // Send to process endpoint
+            fetch(`/api/process/${jobId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    mappings: mappings,
+                    output_format: 'csv'
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = `/download/${jobId}`;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing the file.');
+            });
+        }
+
+        // Function to fetch mapping data with retry logic
+        function fetchMappingData(jobId, maxRetries = 3) {
+            console.log('Fetching mapping data for job ID:', jobId);
+
+            // Create loading indicator if it doesn't exist
+            let loadingIndicator = document.getElementById('loading-indicator');
+            if (!loadingIndicator) {
+                const container = document.querySelector('.container');
+                if (container) {
+                    loadingIndicator = document.createElement('div');
+                    loadingIndicator.className = 'section';
+                    loadingIndicator.id = 'loading-indicator';
+                    loadingIndicator.innerHTML = `
+                        <h2>Loading Mapping Data</h2>
+                        <div class="spinner"></div>
+                        <p>Please wait while we load the mapping data...</p>
+                        <p>This may take a moment while we process your file.</p>
+                    `;
+                    container.appendChild(loadingIndicator);
+                }
+            }
+
+            // Add retry mechanism
+            let retryCount = 0;
+
+            function fetchWithRetry() {
+                console.log(`Attempt ${retryCount + 1} to fetch mapping data for job ID: ${jobId}`);
+
+                fetch(`/api/get-mapping-data/${jobId}`)
+                    .then(response => {
+                        console.log('Response status:', response.status);
+
+                        if (!response.ok) {
+                            // If we get a 404, don't retry
+                            if (response.status === 404) {
+                                return response.json().then(errorData => {
+                                    throw new Error(`Job ID not found: ${errorData.details || 'Invalid job ID'}`);
+                                });
+                            }
+
+                            // For other errors, get the error details from the response
+                            return response.json().then(errorData => {
+                                throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorData.details || errorData.error || 'Unknown error'}`);
+                            });
+                        }
+
+                        return response.json().then(data => {
+                            console.log('Response data received');
+                            return { response, data };
+                        }).catch(error => {
+                            console.error('Error parsing JSON response:', error);
+                            throw new Error('Failed to parse server response. The server might have returned invalid JSON data.');
+                        });
+                    })
+                    .then(({ response, data }) => {
+                        console.log('Processing response data');
+
+                        // Remove loading indicator
+                        if (loadingIndicator) {
+                            loadingIndicator.remove();
+                        }
+
+                        // Check if the response indicates an error
+                        if (!data.success && data.error) {
+                            throw new Error(`API error: ${data.error}, Details: ${data.details || 'No details provided'}`);
+                        }
+
+                        // Log detailed information about the response
+                        if (data.success) {
+                            console.log('Mapping data retrieved successfully');
+                            console.log('Mappings:', data.mappings);
+                            console.log('Source columns:', data.source_columns);
+                            console.log('Sample data keys:', Object.keys(data.sample_data || {}));
+
+                            // Check sample data structure
+                            if (data.sample_data) {
+                                for (const [key, value] of Object.entries(data.sample_data)) {
+                                    console.log(`Sample data for ${key}:`,
+                                        Array.isArray(value) ?
+                                        `Array with ${value.length} items` :
+                                        `Non-array type: ${typeof value}`);
+                                }
+                            } else {
+                                console.warn('No sample data provided in the response');
+                            }
+
+                            // Validate required data
+                            let missingData = [];
+                            if (!data.source_columns || data.source_columns.length === 0) {
+                                missingData.push('source columns');
+                            }
+                            if (!data.mappings || Object.keys(data.mappings).length === 0) {
+                                console.warn('No mappings provided in the response');
+                            }
+                            if (!data.sample_data || Object.keys(data.sample_data).length === 0) {
+                                console.warn('No sample data provided in the response');
+                            }
+
+                            if (missingData.length > 0) {
+                                console.error(`Missing required data: ${missingData.join(', ')}`);
+                                throw new Error(`Missing required data: ${missingData.join(', ')}`);
+                            }
+
+                            // Initialize the page with the data
+                            try {
+                                initializePage({
+                                    job_id: jobId,
+                                    mappings: data.mappings || {},
+                                    source_columns: data.source_columns || [],
+                                    sample_data: data.sample_data || {},
+                                    required_fields: data.required_fields || ["SKU", "Short Description", "Manufacturer"]
+                                });
+                                console.log('Page initialized successfully');
+                            } catch (error) {
+                                console.error('Error initializing page:', error);
+                                throw error;
+                            }
+                        } else {
+                            // Show error message
+                            console.error('Error in mapping data:', data);
+                            let errorDetails = '';
+
+                            if (data.error) {
+                                errorDetails += data.error;
+                            }
+                            if (data.details) {
+                                errorDetails += (errorDetails ? '<br>' : '') + data.details;
+                            }
+
+                            // If we have LLM stats, include them in the error message
+                            if (data.llm_stats) {
+                                console.log('LLM stats:', data.llm_stats);
+                                if (data.llm_stats.error) {
+                                    errorDetails += `<br><br>LLM Error: ${data.llm_stats.error}`;
+                                }
+                                if (data.llm_stats.token_count) {
+                                    errorDetails += `<br>Token count: ${data.llm_stats.token_count}`;
+                                }
+                                if (data.llm_stats.max_tokens) {
+                                    errorDetails += `<br>Max tokens: ${data.llm_stats.max_tokens}`;
+                                }
+                            }
+
+                            // Display a more user-friendly message on the page
+                            document.body.innerHTML = `
+                                <div class="container">
+                                    <h1>Field Mapping</h1>
+                                    <div class="section">
+                                        <h2>Error Loading Mapping Data</h2>
+                                        <p>There was an error loading the mapping data: ${errorDetails || 'Unknown error'}</p>
+                                        <p>This could be due to an issue with the file analysis or the LLM model.</p>
+                                        <p>Please <a href="/upload">upload a file</a> to start the mapping process again.</p>
+                                        <p>If the problem persists, try using a smaller file or a file with fewer columns.</p>
+                                    </div>
+                                    <p><a href="/" class="button button-secondary">&larr; Back to Home</a></p>
+                                </div>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching or processing mapping data:', error);
+
+                        // If we haven't reached max retries and it's not a 404 error, retry
+                        if (retryCount < maxRetries && !error.message.includes('Job ID not found')) {
+                            retryCount++;
+                            console.log(`Retrying (${retryCount}/${maxRetries})...`);
+
+                            // Update loading indicator for retry
+                            if (loadingIndicator) {
+                                loadingIndicator.innerHTML = `
+                                    <h2>Loading Mapping Data</h2>
+                                    <div class="spinner"></div>
+                                    <p>Retry ${retryCount}/${maxRetries}: Please wait while we load the mapping data...</p>
+                                    <p>This may take a moment while we process your file.</p>
+                                `;
+                            }
+
+                            // Wait a bit longer between retries
+                            setTimeout(fetchWithRetry, 2000 * retryCount);
+                        } else {
+                            // Remove loading indicator
+                            if (loadingIndicator) {
+                                loadingIndicator.remove();
+                            }
+
+                            // Show error page with more detailed information
+                            let errorMessage = error.message || 'Unknown error';
+                            let explanations = [
+                                'This could be due to an issue with the file analysis or the LLM model.',
+                                'The file might have too many columns, causing the LLM to exceed its token limit.',
+                                'The server might be experiencing high load or memory constraints.'
+                            ];
+                            let suggestions = [
+                                'Upload a file with fewer columns',
+                                'Try a smaller file',
+                                'Wait a few minutes and try again'
+                            ];
+
+                            // Customize error message for specific errors
+                            if (error.message.includes('Job ID not found')) {
+                                errorMessage = 'Invalid Job ID';
+                                explanations = [
+                                    'The job ID could not be found. This could happen if:',
+                                    '- The server was restarted after you uploaded the file',
+                                    '- The job data was deleted or expired',
+                                    '- There was an error during file analysis'
+                                ];
+                                suggestions = [
+                                    'Upload your file again',
+                                    'Check that you are using the correct URL'
+                                ];
+                            }
+
+                            showErrorPage(
+                                'Error Loading Mapping Data',
+                                errorMessage,
+                                explanations,
+                                suggestions
+                            );
+                        }
+                    });
+            }
+
+            // Start the fetch process
+            fetchWithRetry();
+        }
+
+        // Initialize with data from the server
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize empty data structures to prevent null reference errors
+            initializeEmptyData();
+
+            const jobId = '{{job_id}}';
+            console.log('Initializing mapping page for job ID:', jobId);
+
+            // Store the job ID in localStorage for persistence
+            try {
+                localStorage.setItem('lastMappingJobId', jobId);
+                console.log('Stored job ID in localStorage:', jobId);
+            } catch (e) {
+                console.warn('Could not store job ID in localStorage:', e);
+            }
+
+            // Make sure we have a valid job ID
+            if (!jobId || jobId === '{{job_id}}' || jobId === '') {
+                console.error('Invalid job ID:', jobId);
+                showErrorPage('Invalid Job ID', 'No valid job ID was provided. Please upload a file to start the mapping process.');
+                return;
+            }
+
+            // Log the job ID for debugging
+            console.log('Using job ID:', jobId);
+
+            // Add CSS for spinner
+            const style = document.createElement('style');
+            style.textContent = `
+                .spinner {
+                    border: 4px solid rgba(0, 0, 0, 0.1);
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    border-left-color: #3498db;
+                    animation: spin 1s linear infinite;
+                    margin: 20px auto;
+                }
+
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Fetch mapping data with retry logic
+            fetchMappingData(jobId, 3);
+
+        // Helper function to show error page
+        function showErrorPage(title, message, explanations = [], suggestions = []) {
+            console.log(`Showing error page: ${title} - ${message}`);
+
+            let explanationsHtml = '';
+            if (explanations && explanations.length > 0) {
+                explanationsHtml = '<p>' + explanations.join('</p><p>') + '</p>';
+            }
+
+            let suggestionsHtml = '';
+            if (suggestions && suggestions.length > 0) {
+                suggestionsHtml = '<h3>Suggestions:</h3><ul><li>' + suggestions.join('</li><li>') + '</li></ul>';
+            }
+
+            document.body.innerHTML = `
+                <div class="container">
+                    <h1>Field Mapping</h1>
+                    <div class="section">
+                        <h2>${title}</h2>
+                        <p>${message}</p>
+                        ${explanationsHtml}
+                        ${suggestionsHtml}
+                        <p>Please <a href="/upload">upload a file</a> to start the mapping process again.</p>
+                    </div>
+                    <p><a href="/" class="button button-secondary">&larr; Back to Home</a></p>
+                </div>
+            `;
+        }
+        });
+    </script>
+</body>
+</html>

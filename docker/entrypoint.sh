@@ -92,21 +92,7 @@ else
         log "Continuing despite LLM test failures..."
     fi
 
-    # Check for frontend test failures
-    if [ -f "/app/test_results/frontend_tests_failed" ]; then
-        log "Frontend tests failed! This may affect the user interface."
-
-        # Check if we should continue despite frontend test failures
-        if [ "$CONTINUE_ON_FRONTEND_TEST_FAILURE" = "true" ]; then
-            log "Continuing despite frontend test failures as CONTINUE_ON_FRONTEND_TEST_FAILURE=true"
-        else
-            log "Frontend tests failed! Please fix the issues before continuing."
-            log "You can set CONTINUE_ON_FRONTEND_TEST_FAILURE=true to continue anyway."
-
-            # Don't exit, just set a flag
-            export FRONTEND_TESTS_FAILED=true
-        fi
-    fi
+    # No frontend tests to check
 
     # Check for integration test failures
     if [ -f "/app/test_results/integration_tests_failed" ]; then
@@ -152,6 +138,6 @@ if [[ "$*" == *"--test-only"* ]]; then
 else
     # Start the application with enhanced logging
     log "Starting AV Catalog Converter API..."
-    log "Command: python app.py $@"
-    python app.py "$@" 2>&1 | tee -a $ENTRYPOINT_LOG
+    log "Command: python app.py --api"
+    python app.py --api 2>&1 | tee -a $ENTRYPOINT_LOG
 fi

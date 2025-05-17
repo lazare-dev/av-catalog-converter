@@ -101,17 +101,48 @@ class SemanticMapper:
 
         # Get mapping from LLM
         try:
-            # Set a longer timeout for mapping which can be complex
-            response = self.llm_client.generate_response(prompt)
+            # Check if we need to use chunking (more than 10 columns)
+            if len(columns) > 10 and hasattr(self.llm_client, 'process_field_mapping'):
+                self.logger.info(f"Using chunked field mapping for {len(columns)} columns")
 
-            # Check for rate limiting errors
-            if "rate limit exceeded" in response.lower() or "error:" in response.lower():
-                self.logger.warning(f"Rate limiting detected in response: {response}")
-                # Use fallback mapping based on column names and structure info
-                mapping = self._generate_fallback_mapping(columns, structure_info)
+                # Convert schema fields to the expected format
+                standard_fields = {field: {"description": "Standard field", "examples": []} for field in FIELD_ORDER}
+
+                # Convert sample data to column samples format
+                column_samples = {}
+                for col in columns:
+                    column_samples[col] = [row.get(col, "") for row in sample_data if row.get(col) is not None][:5]
+
+                # Use the new chunking method
+                mapping_data = self.llm_client.process_field_mapping(
+                    standard_fields, columns, column_samples, structure_info
+                )
+
+                # Extract mappings from the response
+                if isinstance(mapping_data, dict) and 'field_mappings' in mapping_data:
+                    mapping = {}
+                    for field, info in mapping_data['field_mappings'].items():
+                        if isinstance(info, dict) and 'column' in info:
+                            mapping[info['column']] = field
+                        elif isinstance(info, str):
+                            mapping[info] = field
+
+                    self.logger.info(f"Extracted {len(mapping)} mappings from chunked processing")
+                else:
+                    self.logger.warning("Invalid response format from chunked processing")
+                    mapping = self._generate_fallback_mapping(columns, structure_info)
             else:
-                # Parse the response normally
-                mapping = self._parse_mapping_response(response, columns)
+                # Set a longer timeout for mapping which can be complex
+                response = self.llm_client.generate_response(prompt)
+
+                # Check for rate limiting errors
+                if "rate limit exceeded" in response.lower() or "error:" in response.lower():
+                    self.logger.warning(f"Rate limiting detected in response: {response}")
+                    # Use fallback mapping based on column names and structure info
+                    mapping = self._generate_fallback_mapping(columns, structure_info)
+                else:
+                    # Parse the response normally
+                    mapping = self._parse_mapping_response(response, columns)
 
             # Validate the mapping
             mapping = self._validate_mapping(mapping, columns)

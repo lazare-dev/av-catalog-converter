@@ -171,6 +171,141 @@ class FieldMapper:
 
         return standardized_df
 
+    def _process_with_manual_chunking(self, columns, sample_rows):
+        """
+        Process field mapping with manual chunking for large inputs
+
+        Args:
+            columns (List[str]): Column names
+            sample_rows (List[List[Any]]): Sample data rows
+
+        Returns:
+            Dict[str, Any]: Mapping results
+        """
+        logger.info(f"Processing field mapping with manual chunking for {len(columns)} columns")
+
+        # Determine optimal chunk size based on column count
+        if len(columns) > 20:
+            chunk_size = 3  # Very small chunks for very large inputs
+        elif len(columns) > 12:
+            chunk_size = 4  # Small chunks for large inputs
+        else:
+            chunk_size = 5  # Default chunk size
+
+        logger.info(f"Using chunk size of {chunk_size} columns")
+
+        # Split columns into batches
+        column_batches = []
+        for i in range(0, len(columns), chunk_size):
+            batch = columns[i:i+chunk_size]
+            column_batches.append(batch)
+
+        logger.info(f"Split {len(columns)} columns into {len(column_batches)} batches")
+
+        # Initialize results
+        all_mappings = {}
+        batch_errors = []
+
+        # Process each batch separately
+        for batch_idx, column_batch in enumerate(column_batches):
+            logger.info(f"Processing batch {batch_idx+1}/{len(column_batches)} with {len(column_batch)} columns")
+
+            # Create sample data for this batch
+            batch_sample_rows = []
+            for row in sample_rows:
+                batch_row = []
+                for i, col in enumerate(columns):
+                    if col in column_batch:
+                        # Find the index of the column in the original columns list
+                        orig_idx = columns.index(col)
+                        # Add the sample value for this column
+                        if orig_idx < len(row):
+                            batch_row.append(row[orig_idx])
+                        else:
+                            batch_row.append(None)
+                batch_sample_rows.append(batch_row)
+
+            # Generate prompt for this batch
+            try:
+                # Create a simplified prompt for this batch
+                from prompts.field_mapping import get_field_mapping_prompt
+
+                # Convert batch sample rows to column samples format
+                batch_column_samples = {}
+                for i, col in enumerate(column_batch):
+                    batch_column_samples[col] = []
+                    for row in batch_sample_rows:
+                        if i < len(row) and row[i] is not None:
+                            batch_column_samples[col].append(str(row[i]))
+
+                # Generate prompt
+                prompt = get_field_mapping_prompt(
+                    FIELD_ORDER,
+                    column_batch,
+                    batch_column_samples,
+                    {}  # Empty structure info to reduce tokens
+                )
+
+                # Get response from LLM
+                logger.info(f"Sending prompt for batch {batch_idx+1} to LLM")
+                response = self.llm_client.generate_response(prompt)
+
+                # Parse the response
+                json_parser = JSONParser()
+                batch_result = json_parser.parse(response)
+
+                # Extract mappings
+                if isinstance(batch_result, dict):
+                    if 'field_mappings' in batch_result:
+                        all_mappings.update(batch_result['field_mappings'])
+                        logger.info(f"Added {len(batch_result['field_mappings'])} mappings from batch {batch_idx+1}")
+                    elif 'mappings' in batch_result:
+                        # Handle old format
+                        all_mappings.update(batch_result['mappings'])
+                        logger.info(f"Added {len(batch_result['mappings'])} mappings from batch {batch_idx+1} (old format)")
+                    else:
+                        logger.warning(f"Invalid response format from batch {batch_idx+1}")
+                        batch_errors.append(f"Batch {batch_idx+1}: Invalid response format")
+                else:
+                    logger.warning(f"Invalid response type from batch {batch_idx+1}: {type(batch_result)}")
+                    batch_errors.append(f"Batch {batch_idx+1}: Invalid response type")
+
+            except Exception as e:
+                logger.error(f"Error processing batch {batch_idx+1}: {str(e)}")
+                batch_errors.append(f"Batch {batch_idx+1}: {str(e)}")
+
+                # If LLM fails, use heuristics for this batch
+                for col in column_batch:
+                    col_lower = col.lower()
+                    # Simple heuristic mapping based on column name
+                    if any(term in col_lower for term in ["sku", "id", "code", "product"]):
+                        all_mappings["SKU"] = col
+                    elif any(term in col_lower for term in ["desc", "name", "title"]):
+                        all_mappings["Short Description"] = col
+                    elif any(term in col_lower for term in ["manuf", "brand", "make", "vendor"]):
+                        all_mappings["Manufacturer"] = col
+                    elif any(term in col_lower for term in ["price", "cost", "msrp"]):
+                        all_mappings["Trade Price"] = col
+
+        # Combine results
+        result = {
+            "field_mappings": all_mappings,
+            "notes": f"Processed in {len(column_batches)} chunks due to large input"
+        }
+
+        if batch_errors:
+            result["errors"] = batch_errors
+            result["notes"] += f" with {len(batch_errors)} errors"
+
+        logger.info(f"Completed field mapping with {len(all_mappings)} total mappings")
+
+        # Convert to old format for backward compatibility if needed
+        if not all_mappings:
+            result["mappings"] = {}
+            logger.warning("No mappings found, returning empty mappings dict for backward compatibility")
+
+        return result
+
     def _detect_manufacturer(self, data: pd.DataFrame) -> Optional[str]:
         """
         Detect the manufacturer from the data
@@ -339,54 +474,122 @@ class FieldMapper:
         for col in columns:
             column_samples[col] = [row.get(col, "") for row in sample_data if row.get(col) is not None][:5]
 
-        prompt = get_field_mapping_prompt(standard_fields, columns, column_samples, structure_info)
-
-        # Get mapping suggestions from LLM
+        # Check if we need to use chunking
         try:
-            response = self.llm_client.generate_response(prompt)
+            # Log detailed information about the input
+            logger.info(f"Mapping {len(columns)} columns with {sum(len(samples) for samples in column_samples.values())} total sample values")
 
-            # Parse the JSON response
-            mapping_data = self.json_parser.parse(response)
+            # Log sample data sizes for debugging
+            sample_sizes = {col: len(column_samples.get(col, [])) for col in columns}
+            logger.debug(f"Sample sizes by column: {sample_sizes}")
 
-            # Validate the response format
-            if not isinstance(mapping_data, dict):
-                logger.warning("Invalid mapping response format - not a dict")
-                mapping_data = {'field_mappings': {}, 'notes': 'Failed to parse LLM response'}
-            elif 'field_mappings' not in mapping_data and 'mappings' in mapping_data:
-                # Handle old format
-                logger.info("Converting old mappings format to new field_mappings format")
-                mapping_data['field_mappings'] = mapping_data['mappings']
-                del mapping_data['mappings']
-            elif 'field_mappings' not in mapping_data:
-                # Try to extract mappings from the response directly
-                try:
-                    llm_mappings = {}
-                    # Look for patterns like "input_column_name": "Target_Field_Name"
-                    pattern = r'"([^"]+)"\s*:\s*"([^"]+)"'
-                    matches = re.findall(pattern, response)
+            # Estimate token count for input
+            estimated_tokens = sum(len(col.split()) for col in columns) + \
+                              sum(len(str(sample).split()) for samples in column_samples.values() for sample in samples if sample)
+            logger.info(f"Estimated token count for input: {estimated_tokens}")
 
-                    for source, target in matches:
-                        if source in columns and target in FIELD_ORDER:
-                            llm_mappings[source] = target
+            # Check if we should use chunking
+            use_chunking = False
 
-                    if llm_mappings:
-                        logger.info(f"Extracted {len(llm_mappings)} mappings directly from response")
-                        mapping_data = {
-                            'field_mappings': llm_mappings,
-                            'notes': 'Mappings extracted directly from response'
-                        }
-                    else:
-                        logger.warning("Invalid mapping response format - no mappings")
+            # Use chunking if we have many columns or estimated tokens are high
+            if len(columns) > 8:
+                logger.info(f"Using chunking due to large number of columns: {len(columns)} > 8")
+                use_chunking = True
+            elif estimated_tokens > 400:  # Conservative threshold below DistilBERT's 512 limit
+                logger.info(f"Using chunking due to high token count: {estimated_tokens} > 400")
+                use_chunking = True
+
+            # Check if the client supports chunking
+            has_chunking = hasattr(self.llm_client, 'process_field_mapping')
+
+            # If chunking is needed but not supported, implement a fallback chunking approach
+            if use_chunking and not has_chunking:
+                logger.warning(f"Chunking needed but LLM client doesn't support it. Using manual chunking approach.")
+
+                # Implement manual chunking
+                return self._process_with_manual_chunking(columns, sample_rows)
+
+            if use_chunking and has_chunking:
+                logger.info(f"Using chunked field mapping for {len(columns)} columns")
+                # Use the chunking method
+                mapping_data = self.llm_client.process_field_mapping(
+                    standard_fields, columns, column_samples, structure_info
+                )
+
+                # Log the results
+                if isinstance(mapping_data, dict):
+                    field_mappings = mapping_data.get('field_mappings', {})
+                    logger.info(f"Chunked mapping complete with {len(field_mappings)} mappings")
+
+                    # Log any errors that occurred during chunking
+                    if 'errors' in mapping_data and mapping_data['errors']:
+                        logger.warning(f"Chunking completed with {len(mapping_data['errors'])} errors: {mapping_data['errors']}")
+                else:
+                    logger.warning(f"Unexpected mapping_data type: {type(mapping_data)}")
+            else:
+                # Use the traditional approach for smaller inputs
+                logger.info(f"Using standard field mapping for {len(columns)} columns")
+                prompt = get_field_mapping_prompt(standard_fields, columns, column_samples, structure_info)
+
+                # Log prompt size for debugging
+                prompt_size = len(prompt)
+                logger.debug(f"Prompt size: {prompt_size} characters")
+
+                # Generate response
+                response = self.llm_client.generate_response(prompt)
+
+                # Log response size for debugging
+                response_size = len(response)
+                logger.debug(f"Response size: {response_size} characters")
+
+                # Parse the JSON response
+                mapping_data = self.json_parser.parse(response)
+
+                # Validate the response format
+                if not isinstance(mapping_data, dict):
+                    logger.warning("Invalid mapping response format - not a dict")
+                    mapping_data = {'field_mappings': {}, 'notes': 'Failed to parse LLM response'}
+                elif 'field_mappings' not in mapping_data and 'mappings' in mapping_data:
+                    # Handle old format
+                    logger.info("Converting old mappings format to new field_mappings format")
+                    mapping_data['field_mappings'] = mapping_data['mappings']
+                    del mapping_data['mappings']
+                elif 'field_mappings' not in mapping_data:
+                    # Try to extract mappings from the response directly
+                    try:
+                        llm_mappings = {}
+                        # Look for patterns like "input_column_name": "Target_Field_Name"
+                        pattern = r'"([^"]+)"\s*:\s*"([^"]+)"'
+                        matches = re.findall(pattern, response)
+
+                        for source, target in matches:
+                            if source in columns and target in FIELD_ORDER:
+                                llm_mappings[source] = target
+
+                        if llm_mappings:
+                            logger.info(f"Extracted {len(llm_mappings)} mappings directly from response")
+                            mapping_data = {
+                                'field_mappings': llm_mappings,
+                                'notes': 'Mappings extracted directly from response'
+                            }
+                        else:
+                            logger.warning("Invalid mapping response format - no mappings")
+                            mapping_data = {
+                                'field_mappings': {},
+                                'notes': 'Failed to parse LLM response'
+                            }
+                    except Exception as e:
+                        logger.warning(f"Failed to extract mappings directly: {str(e)}")
                         mapping_data = {
                             'field_mappings': {},
                             'notes': 'Failed to parse LLM response'
                         }
-                except Exception as e:
-                    logger.warning(f"Failed to extract mappings directly: {str(e)}")
-                    mapping_data = {
-                        'field_mappings': {},
-                        'notes': 'Failed to parse LLM response'
-                    }
+        except Exception as e:
+            logger.error(f"Error in field mapping: {str(e)}")
+            mapping_data = {
+                'field_mappings': {},
+                'notes': f'Error in field mapping: {str(e)}'
+            }
 
             # Combine direct mappings with LLM mappings
             combined_mappings = direct_mappings.copy()

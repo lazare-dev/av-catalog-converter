@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to run all tests (backend and frontend) in the Docker container
+# Script to run backend tests in the Docker container
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
@@ -9,7 +9,6 @@ echo "=================================================="
 
 # Directory setup
 BACKEND_DIR="/app"
-FRONTEND_DIR="/app/web/frontend"
 LOG_DIR="/app/logs"
 TEST_RESULTS_DIR="/app/test_results"
 
@@ -20,7 +19,6 @@ mkdir -p $TEST_RESULTS_DIR
 # Log file
 LOG_FILE="$LOG_DIR/test_run_$(date +%Y%m%d_%H%M%S).log"
 BACKEND_RESULTS="$TEST_RESULTS_DIR/backend_results.xml"
-FRONTEND_RESULTS="$TEST_RESULTS_DIR/frontend_results.xml"
 
 # Function to log messages
 log() {
@@ -79,84 +77,7 @@ run_backend_tests() {
   fi
 }
 
-# Function to run frontend tests
-run_frontend_tests() {
-  log "Running frontend tests..."
-
-  # Check if frontend directory exists
-  if [ ! -d "$FRONTEND_DIR" ]; then
-    log "Frontend directory not found. Skipping frontend tests."
-    return 0
-  fi
-
-  cd $FRONTEND_DIR
-
-  # Install dependencies if needed
-  if [ ! -d "node_modules" ]; then
-    log "Installing frontend dependencies..."
-    npm install --silent 2>&1 | tee -a $LOG_FILE
-  fi
-
-  # Run Jest tests with JUnit reporter
-  log "Running Jest tests..."
-  npx jest --ci --reporters=default --reporters=jest-junit 2>&1 | tee -a $LOG_FILE
-
-  # Save test results
-  mv junit.xml $FRONTEND_RESULTS 2>/dev/null || true
-
-  # Check exit code
-  if [ ${PIPESTATUS[0]} -eq 0 ]; then
-    log "✅ Frontend tests passed!"
-    return 0
-  else
-    log "❌ Frontend tests failed!"
-    return 1
-  fi
-}
-
-# Function to run integration tests
-run_integration_tests() {
-  log "Running integration tests..."
-  cd $BACKEND_DIR
-
-  # Start the backend server in the background
-  log "Starting backend server for integration tests..."
-  python app.py --api --port 8080 &
-  SERVER_PID=$!
-
-  # Wait for server to start
-  log "Waiting for server to start..."
-  sleep 5
-
-  # Run integration tests
-  log "Running Cypress integration tests..."
-  cd $FRONTEND_DIR
-
-  # Install Cypress if needed
-  if [ ! -d "node_modules/cypress" ]; then
-    log "Installing Cypress..."
-    npm install cypress --silent 2>&1 | tee -a $LOG_FILE
-  fi
-
-  # Run Cypress tests
-  npx cypress run --reporter junit --reporter-options "mochaFile=$TEST_RESULTS_DIR/integration_results.xml" 2>&1 | tee -a $LOG_FILE
-
-  # Save exit code
-  CYPRESS_EXIT_CODE=${PIPESTATUS[0]}
-
-  # Kill the server
-  log "Stopping backend server..."
-  kill $SERVER_PID
-
-  # Check exit code
-  if [ $CYPRESS_EXIT_CODE -eq 0 ]; then
-    log "✅ Integration tests passed!"
-    return 0
-  else
-    log "❌ Integration tests failed!"
-    return 1
-  fi
-}
+# No frontend or integration tests
 
 # Function to generate test report
 generate_test_report() {
@@ -183,27 +104,17 @@ log "Starting test suite execution"
 BACKEND_RESULT=0
 run_backend_tests || BACKEND_RESULT=1
 
-# Run frontend tests
-FRONTEND_RESULT=0
-run_frontend_tests || FRONTEND_RESULT=1
-
-# Run integration tests
-INTEGRATION_RESULT=0
-run_integration_tests || INTEGRATION_RESULT=1
-
 # Summary
 log "=================================================="
 log "Test Suite Summary:"
 log "Backend Tests: $([ $BACKEND_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
-log "Frontend Tests: $([ $FRONTEND_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
-log "Integration Tests: $([ $INTEGRATION_RESULT -eq 0 ] && echo 'PASSED' || echo 'FAILED')"
 log "=================================================="
 
 # Always generate test report, regardless of test results
 generate_test_report
 
 # Overall result
-if [ $BACKEND_RESULT -eq 0 ] && [ $FRONTEND_RESULT -eq 0 ] && [ $INTEGRATION_RESULT -eq 0 ]; then
+if [ $BACKEND_RESULT -eq 0 ]; then
   log "✅ All tests passed!"
   exit 0
 else

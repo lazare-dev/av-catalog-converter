@@ -1,5 +1,4 @@
 # Single-stage build for Python backend
-# The frontend is built locally and mounted into the container
 
 # Use a Python image for the backend
 FROM python:3.9
@@ -40,10 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js for frontend tests
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g npm@10.2.4
+# No frontend dependencies needed
 
 # Create necessary directories
 RUN mkdir -p logs data/input data/output cache/models cache/torch test_results \
@@ -67,8 +63,7 @@ RUN pip install --upgrade pip && \
 # Copy the application code
 COPY . .
 
-# Create directory for frontend build
-RUN mkdir -p /app/web/frontend/build
+# No frontend build needed
 
 # Set permissions for scripts
 RUN chmod +x docker/entrypoint.sh docker/run_tests.sh docker/run.sh docker/stop.sh

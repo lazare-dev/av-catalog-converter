@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Test - AV Catalog Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"], select {
+            padding: 8px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input[type="submit"] {
+            background-color: #0066cc;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #0055aa;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload Catalog File</h1>
+    <p>Upload your audio-visual equipment catalog file to convert it to a standardized format.</p>
+
+    <form action="http://localhost:8080/api/analyze" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="file">Select File:</label>
+            <input type="file" id="file" name="file" required>
+            <small>Supported formats: CSV, Excel, JSON, XML</small>
+        </div>
+
+        <div class="form-group">
+            <label for="format">Output Format:</label>
+            <select id="format" name="format">
+                <option value="csv">CSV</option>
+                <option value="excel">Excel</option>
+                <option value="json">JSON</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <input type="submit" value="Upload and Analyze">
+        </div>
+    </form>
+</body>
+</html>

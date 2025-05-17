@@ -229,25 +229,274 @@ class DistilBERTClient(BaseLLMClient):
         max_length = self.tokenizer.model_max_length - 10
         result = ""
 
-        # Split long prompts into chunks
-        if len(self.tokenizer.encode(prompt)) > max_length:
-            chunks = []
-            tokens = self.tokenizer.encode(prompt, add_special_tokens=False)
+        # Get token count
+        try:
+            token_count = len(self.tokenizer.encode(prompt))
+            self.logger.info(f"Prompt token count: {token_count}/{max_length}")
 
-            for i in range(0, len(tokens), max_length):
-                chunk_tokens = tokens[i:i+max_length]
-                chunk = self.tokenizer.decode(chunk_tokens)
-                chunks.append(chunk)
+            # Split long prompts into chunks
+            if token_count > max_length:
+                self.logger.info(f"Prompt exceeds token limit ({token_count} > {max_length}), chunking prompt")
+                chunks = self._chunk_prompt(prompt, max_length)
+                self.logger.info(f"Split prompt into {len(chunks)} chunks")
 
-            # Process each chunk
-            for chunk in chunks:
-                if "[MASK]" in chunk:
-                    chunk_result = self._process_masked_chunk(chunk)
-                    result += chunk_result
+                # Process each chunk
+                for i, chunk in enumerate(chunks):
+                    self.logger.info(f"Processing chunk {i+1}/{len(chunks)}")
+                    if "[MASK]" in chunk:
+                        chunk_result = self._process_masked_chunk(chunk)
+                        result += chunk_result
+                    else:
+                        result += chunk
+            else:
+                result = self._process_masked_chunk(prompt)
+
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error in _generate_text_with_masked_lm: {str(e)}")
+            self.logger.debug(f"Traceback: {traceback.format_exc()}")
+
+            # Try fallback chunking approach if tokenization fails
+            try:
+                self.logger.info("Attempting fallback chunking approach")
+                chunks = self._chunk_text_by_size(prompt, chunk_size=400)  # Approximate size
+                self.logger.info(f"Split prompt into {len(chunks)} chunks using fallback approach")
+
+                # Process each chunk
+                for i, chunk in enumerate(chunks):
+                    self.logger.info(f"Processing chunk {i+1}/{len(chunks)} (fallback)")
+                    if "[MASK]" in chunk:
+                        chunk_result = self._process_masked_chunk(chunk)
+                        result += chunk_result
+                    else:
+                        result += chunk
+
+                return result
+            except Exception as fallback_error:
+                self.logger.error(f"Fallback chunking failed: {str(fallback_error)}")
+                # If all chunking attempts fail, return the original error
+                raise e
+
+    def _chunk_prompt(self, prompt: str, max_length: int) -> list:
+        """
+        Split a prompt into chunks that respect token limits
+
+        Args:
+            prompt (str): Input prompt
+            max_length (int): Maximum token length per chunk
+
+        Returns:
+            list: List of prompt chunks
+        """
+        chunks = []
+        tokens = self.tokenizer.encode(prompt, add_special_tokens=False)
+
+        # Log token distribution
+        self.logger.debug(f"Total tokens: {len(tokens)}, max_length: {max_length}")
+
+        # Split tokens into chunks
+        for i in range(0, len(tokens), max_length):
+            chunk_tokens = tokens[i:i+max_length]
+            chunk = self.tokenizer.decode(chunk_tokens)
+            chunks.append(chunk)
+
+            # Log chunk information
+            self.logger.debug(f"Chunk {len(chunks)}: {len(chunk_tokens)} tokens, {len(chunk)} chars")
+
+        return chunks
+
+    def _chunk_text_by_size(self, text: str, chunk_size: int) -> list:
+        """
+        Split text into chunks by character count (fallback method)
+
+        Args:
+            text (str): Input text
+            chunk_size (int): Approximate characters per chunk
+
+        Returns:
+            list: List of text chunks
+        """
+        # Simple chunking by character count
+        chunks = []
+        for i in range(0, len(text), chunk_size):
+            chunk = text[i:i+chunk_size]
+            chunks.append(chunk)
+
+        return chunks
+
+    def process_field_mapping(self, standard_fields, input_columns, column_samples, structure_info=None):
+        """
+        Process field mapping with chunking to handle large inputs
+
+        Args:
+            standard_fields (dict): Standard field definitions
+            input_columns (list): Input column names
+            column_samples (dict): Sample data for each column
+            structure_info (dict, optional): Structure analysis info
+
+        Returns:
+            dict: Mapping results
+        """
+        from prompts.field_mapping import get_field_mapping_prompt
+        from utils.parsers.json_parser import JSONParser
+
+        self.logger.info(f"Processing field mapping with chunking for {len(input_columns)} columns")
+
+        # Initialize parser
+        json_parser = JSONParser()
+
+        # Estimate token count for the full input
+        # This is a rough estimation to check if we need chunking
+        total_token_estimate = 0
+        for col in input_columns:
+            # Add tokens for column name
+            total_token_estimate += len(col.split()) + 1
+
+            # Add tokens for sample data
+            if col in column_samples:
+                for sample in column_samples[col]:
+                    if sample and isinstance(sample, str):
+                        total_token_estimate += len(sample.split()) + 1
+
+        self.logger.info(f"Estimated total tokens for all columns: {total_token_estimate}")
+
+        # Get model's max token limit
+        max_tokens = self.tokenizer.model_max_length if hasattr(self, 'tokenizer') else 512
+        self.logger.info(f"Model max token limit: {max_tokens}")
+
+        # If we have a small number of columns or estimated tokens are well below limit, process normally
+        if len(input_columns) <= 5 and total_token_estimate < (max_tokens // 2):
+            self.logger.info(f"Small input (columns: {len(input_columns)}, est. tokens: {total_token_estimate}), processing without chunking")
+            try:
+                prompt = get_field_mapping_prompt(standard_fields, input_columns, column_samples, structure_info or {})
+
+                # Log the actual token count of the prompt
+                if hasattr(self, 'tokenizer'):
+                    actual_tokens = len(self.tokenizer.encode(prompt))
+                    self.logger.info(f"Actual token count for prompt: {actual_tokens}/{max_tokens}")
+
+                    if actual_tokens > max_tokens:
+                        self.logger.warning(f"Prompt exceeds token limit ({actual_tokens} > {max_tokens}), falling back to chunking")
+                        # Fall through to chunking logic
+                    else:
+                        response = self.generate_response(prompt)
+                        result = json_parser.parse(response)
+                        self.logger.info(f"Successfully processed without chunking")
+                        return result
                 else:
-                    result += chunk
-        else:
-            result = self._process_masked_chunk(prompt)
+                    # If we can't check token count, just try it
+                    response = self.generate_response(prompt)
+                    result = json_parser.parse(response)
+                    self.logger.info(f"Successfully processed without chunking")
+                    return result
+            except Exception as e:
+                self.logger.error(f"Error processing without chunking: {str(e)}")
+                self.logger.info(f"Falling back to chunking approach")
+                # Fall through to chunking logic
+
+        # For larger inputs, process in chunks
+        self.logger.info(f"Large input with {len(input_columns)} columns, processing in chunks")
+
+        # Use smaller chunks for very large inputs
+        chunk_size = 5 if total_token_estimate > 1000 else 10
+        self.logger.info(f"Using chunk size of {chunk_size} columns")
+
+        # Split columns into chunks
+        column_chunks = []
+        for i in range(0, len(input_columns), chunk_size):
+            chunk = input_columns[i:i+chunk_size]
+            column_chunks.append(chunk)
+
+        self.logger.info(f"Split into {len(column_chunks)} chunks")
+
+        # Process each chunk
+        all_mappings = {}
+        chunk_errors = []
+
+        for i, chunk in enumerate(column_chunks):
+            self.logger.info(f"Processing chunk {i+1}/{len(column_chunks)} with {len(chunk)} columns")
+
+            # Create chunk-specific samples
+            chunk_samples = {col: column_samples.get(col, []) for col in chunk}
+
+            # Generate prompt for this chunk
+            chunk_prompt = get_field_mapping_prompt(standard_fields, chunk, chunk_samples, structure_info or {})
+
+            # Log token count for this chunk
+            if hasattr(self, 'tokenizer'):
+                chunk_tokens = len(self.tokenizer.encode(chunk_prompt))
+                self.logger.info(f"Chunk {i+1} token count: {chunk_tokens}/{max_tokens}")
+
+                if chunk_tokens > max_tokens:
+                    self.logger.warning(f"Chunk {i+1} exceeds token limit ({chunk_tokens} > {max_tokens})")
+                    # Try with even smaller chunk or skip if necessary
+                    if len(chunk) > 2:
+                        self.logger.info(f"Splitting chunk {i+1} into smaller pieces")
+                        # Process this chunk in even smaller pieces
+                        sub_chunks = []
+                        for j in range(0, len(chunk), 2):
+                            sub_chunk = chunk[j:j+2]
+                            sub_chunks.append(sub_chunk)
+
+                        for j, sub_chunk in enumerate(sub_chunks):
+                            self.logger.info(f"Processing sub-chunk {j+1}/{len(sub_chunks)} of chunk {i+1}")
+                            sub_samples = {col: chunk_samples.get(col, []) for col in sub_chunk}
+                            sub_prompt = get_field_mapping_prompt(standard_fields, sub_chunk, sub_samples, structure_info or {})
+
+                            try:
+                                sub_response = self.generate_response(sub_prompt)
+                                sub_result = json_parser.parse(sub_response)
+
+                                if isinstance(sub_result, dict) and 'field_mappings' in sub_result:
+                                    all_mappings.update(sub_result['field_mappings'])
+                                    self.logger.info(f"Added {len(sub_result['field_mappings'])} mappings from sub-chunk {j+1} of chunk {i+1}")
+                            except Exception as e:
+                                self.logger.error(f"Error processing sub-chunk {j+1} of chunk {i+1}: {str(e)}")
+                                chunk_errors.append(f"Sub-chunk {j+1} of chunk {i+1}: {str(e)}")
+
+                        # Skip the main chunk processing since we've handled it in sub-chunks
+                        continue
+                    else:
+                        self.logger.warning(f"Chunk {i+1} is too small to split further, will attempt to process anyway")
+
+            # Process chunk
+            try:
+                chunk_response = self.generate_response(chunk_prompt)
+                chunk_result = json_parser.parse(chunk_response)
+
+                # Extract mappings
+                if isinstance(chunk_result, dict) and 'field_mappings' in chunk_result:
+                    all_mappings.update(chunk_result['field_mappings'])
+                    self.logger.info(f"Added {len(chunk_result['field_mappings'])} mappings from chunk {i+1}")
+                elif isinstance(chunk_result, dict) and 'mappings' in chunk_result:
+                    # Handle old format
+                    self.logger.info(f"Converting old mappings format from chunk {i+1}")
+                    all_mappings.update(chunk_result['mappings'])
+                    self.logger.info(f"Added {len(chunk_result['mappings'])} mappings from chunk {i+1} (old format)")
+                else:
+                    self.logger.warning(f"Invalid response format from chunk {i+1}: {chunk_result}")
+                    chunk_errors.append(f"Chunk {i+1}: Invalid response format")
+            except Exception as e:
+                self.logger.error(f"Error processing chunk {i+1}: {str(e)}")
+                chunk_errors.append(f"Chunk {i+1}: {str(e)}")
+
+        # Combine results
+        result = {
+            "field_mappings": all_mappings,
+            "notes": f"Processed in {len(column_chunks)} chunks due to large input"
+        }
+
+        if chunk_errors:
+            result["errors"] = chunk_errors
+            result["notes"] += f" with {len(chunk_errors)} errors"
+
+        self.logger.info(f"Completed field mapping with {len(all_mappings)} total mappings")
+
+        # Convert to old format for backward compatibility if needed
+        if not all_mappings:
+            result["mappings"] = {}
+            self.logger.warning("No mappings found, returning empty mappings dict for backward compatibility")
 
         return result
 
@@ -268,13 +517,36 @@ class DistilBERTClient(BaseLLMClient):
         if mask_count == 0:
             return text
 
+        # Check if the text is too long for the model
+        try:
+            if hasattr(self, 'tokenizer'):
+                token_count = len(self.tokenizer.encode(text))
+                max_length = self.tokenizer.model_max_length
+
+                if token_count > max_length:
+                    self.logger.warning(f"Text chunk exceeds token limit ({token_count} > {max_length}), truncating")
+                    # Truncate the text to fit within token limits
+                    tokens = self.tokenizer.encode(text, add_special_tokens=False)
+                    truncated_tokens = tokens[:max_length-2]  # Leave room for special tokens
+                    text = self.tokenizer.decode(truncated_tokens)
+
+                    # Ensure we still have at least one mask token
+                    if "[MASK]" not in text:
+                        text += " [MASK]"
+
+                    self.logger.info(f"Truncated text to {len(self.tokenizer.encode(text))} tokens")
+        except Exception as e:
+            self.logger.warning(f"Error checking token count: {str(e)}")
+            # Continue with processing, the fill_mask_pipeline will handle any errors
+
         # Fill masks one by one
-        for _ in range(mask_count):
+        for i in range(mask_count):
             if "[MASK]" not in text:
                 break
 
             try:
                 # Get predictions for the first mask
+                self.logger.debug(f"Filling mask {i+1}/{mask_count}")
                 predictions = self.fill_mask_pipeline(text, top_k=1)
 
                 # Handle different return formats
@@ -291,8 +563,35 @@ class DistilBERTClient(BaseLLMClient):
 
                 # Replace the text with the filled version
                 text = prediction["sequence"]
+                self.logger.debug(f"Filled mask {i+1}, new text length: {len(text)}")
 
             except Exception as e:
+                # Check if this is a token limit error
+                error_str = str(e).lower()
+                if 'token' in error_str and ('limit' in error_str or 'exceed' in error_str or 'length' in error_str):
+                    self.logger.warning(f"Token limit error while filling mask: {str(e)}")
+
+                    # Try to recover by truncating the text
+                    try:
+                        if hasattr(self, 'tokenizer'):
+                            # Truncate more aggressively
+                            tokens = self.tokenizer.encode(text, add_special_tokens=False)
+                            # Use 75% of max length to be safe
+                            safe_length = int(self.tokenizer.model_max_length * 0.75)
+                            truncated_tokens = tokens[:safe_length]
+                            text = self.tokenizer.decode(truncated_tokens)
+
+                            # Ensure we still have at least one mask token
+                            if "[MASK]" not in text:
+                                text += " [MASK]"
+
+                            self.logger.info(f"Recovered by truncating text to {len(self.tokenizer.encode(text))} tokens")
+                            # Try again with the truncated text in the next iteration
+                            continue
+                    except Exception as truncate_error:
+                        self.logger.error(f"Error during truncation recovery: {str(truncate_error)}")
+
+                # For other errors, log and break
                 self.logger.error(f"Error filling mask: {str(e)}")
                 break
 
@@ -324,6 +623,25 @@ class DistilBERTClient(BaseLLMClient):
                 error_msg = f"Failed to initialize model: {str(init_error)}"
                 self.logger.error(error_msg)
                 return f"Error: {error_msg}"
+
+        # Check if prompt is likely to exceed token limits
+        try:
+            if hasattr(self, 'tokenizer'):
+                # Estimate token count
+                estimated_tokens = len(prompt) // 4  # Rough estimate: 4 chars per token
+                max_tokens = self.tokenizer.model_max_length
+
+                # Log token count estimate
+                self.logger.info(f"Estimated token count: {estimated_tokens}/{max_tokens}")
+
+                # If prompt is likely to exceed token limits, use chunking directly
+                if estimated_tokens > max_tokens:
+                    self.logger.warning(f"Prompt likely exceeds token limit ({estimated_tokens} > {max_tokens})")
+                    self.logger.info("Using chunking to handle large prompt")
+                    # No need to check actual token count, _generate_text_with_masked_lm will handle chunking
+        except Exception as e:
+            self.logger.warning(f"Error estimating token count: {str(e)}")
+            # Continue with processing, the generate method will handle any errors
 
         # Apply rate limiting if enabled
         if self.rate_limiter is not None:
@@ -378,6 +696,12 @@ class DistilBERTClient(BaseLLMClient):
             error_msg = f"Error generating response: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             self.logger.debug(f"Traceback: {traceback.format_exc()}")
+
+            # Check if this is a token limit error
+            error_str = str(e).lower()
+            if 'token' in error_str and ('limit' in error_str or 'exceed' in error_str or 'length' in error_str):
+                self.logger.warning("Token limit error detected, using fallback response")
+                return self._generate_fallback_response(prompt)
 
             # Return error message
             return f"Error: {error_msg}"
@@ -449,7 +773,7 @@ class DistilBERTClient(BaseLLMClient):
 
     def _generate_fallback_response(self, prompt: str) -> str:
         """
-        Generate a fallback response when rate limited
+        Generate a fallback response when rate limited or token limit exceeded
 
         Args:
             prompt (str): Input prompt
@@ -462,17 +786,79 @@ class DistilBERTClient(BaseLLMClient):
         # Simple keyword-based response for common tasks
         lower_prompt = prompt.lower()
 
+        # Determine if this is a token limit issue or rate limit issue
+        is_token_limit = False
+
+        # Check if we have a tokenizer and can check token count
+        try:
+            if hasattr(self, 'tokenizer'):
+                estimated_tokens = len(prompt) // 4  # Rough estimate: 4 chars per token
+                max_tokens = self.tokenizer.model_max_length
+
+                if estimated_tokens > max_tokens:
+                    is_token_limit = True
+                    self.logger.info(f"Fallback due to token limit: {estimated_tokens} > {max_tokens}")
+        except Exception as e:
+            self.logger.warning(f"Error checking token count for fallback: {str(e)}")
+
+        # Prepare reason text based on the issue type
+        reason = "Token limit exceeded" if is_token_limit else "Rate limit exceeded"
+
+        # Field mapping fallback
         if "field mapping" in lower_prompt or "map fields" in lower_prompt:
-            return '{"mappings": {"Please try again later": "Rate limit exceeded"}}'
+            # Extract column names from prompt if possible
+            columns = []
+            try:
+                import re
+                # Look for column names in the prompt
+                col_match = re.search(r'columns:\s*\[(.*?)\]', prompt, re.IGNORECASE | re.DOTALL)
+                if col_match:
+                    cols_str = col_match.group(1)
+                    # Extract column names
+                    cols = [c.strip().strip("'\"") for c in cols_str.split(',')]
+                    columns = [c for c in cols if c]  # Filter out empty strings
 
+                    self.logger.info(f"Extracted {len(columns)} columns from prompt for fallback mapping")
+            except Exception as e:
+                self.logger.warning(f"Error extracting columns from prompt: {str(e)}")
+
+            # If we found columns, create a simple mapping
+            if columns:
+                mappings = {}
+                for col in columns:
+                    col_lower = col.lower()
+                    # Simple heuristic mapping based on column name
+                    if any(term in col_lower for term in ["sku", "id", "code", "product"]):
+                        mappings["SKU"] = col
+                    elif any(term in col_lower for term in ["desc", "name", "title"]):
+                        mappings["Short Description"] = col
+                    elif any(term in col_lower for term in ["manuf", "brand", "make", "vendor"]):
+                        mappings["Manufacturer"] = col
+                    elif any(term in col_lower for term in ["price", "cost", "msrp"]):
+                        mappings["Trade Price"] = col
+
+                # Create a JSON response with the mappings
+                import json
+                response = {
+                    "field_mappings": mappings,
+                    "notes": f"{reason}. Using fallback mapping based on column names.",
+                    "fallback": True
+                }
+                return json.dumps(response)
+
+            # Default field mapping fallback
+            return f'{{"field_mappings": {{}}, "notes": "{reason}. Please try again with fewer columns or a smaller input.", "fallback": true}}'
+
+        # Structure analysis fallback
         if "structure analysis" in lower_prompt or "analyze structure" in lower_prompt:
-            return '{"structure_notes": "Rate limit exceeded. Please try again later."}'
+            return f'{{"structure_notes": "{reason}. Using fallback analysis.", "column_analysis": {{}}, "possible_field_mappings": {{}}, "data_quality_issues": [], "fallback": true}}'
 
+        # Category fallback
         if "category" in lower_prompt or "categorize" in lower_prompt:
-            return '{"category": "Unknown", "reason": "Rate limit exceeded"}'
+            return f'{{"category": "Unknown", "reason": "{reason}", "fallback": true}}'
 
         # Generic fallback
-        return "Rate limit exceeded. Please try again later."
+        return f"{reason}. Please try again with a smaller input or fewer columns."
 
     def cleanup(self):
         """Release resources used by the model"""
