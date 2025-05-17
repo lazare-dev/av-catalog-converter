@@ -7,8 +7,10 @@ info:
     name: Support
     email: support@example.com
 servers:
-  - url: http://localhost:8080
+  - url: http://localhost:8081
     description: Local development server
+  - url: http://localhost:8080
+    description: Alternative local server
   - url: https://api.example.com
     description: Production server
 paths:
@@ -48,8 +50,8 @@ paths:
                         example: 1024
   /api/upload:
     post:
-      summary: Upload and process file
-      description: Upload a catalog file and convert it to a standardized format
+      summary: Upload file
+      description: Upload a catalog file and save it for later processing. Returns a job ID that can be used to reference the uploaded file.
       operationId: uploadFile
       requestBody:
         required: true
@@ -61,32 +63,40 @@ paths:
                 file:
                   type: string
                   format: binary
-                  description: The catalog file to process
-                format:
+                  description: The catalog file to upload
+                company:
                   type: string
-                  enum: [csv, excel, json]
-                  default: csv
-                  description: Output format
+                  description: Optional company name associated with the file
               required:
                 - file
       responses:
         '200':
-          description: File processed successfully
+          description: File uploaded successfully
           content:
-            text/csv:
-              schema:
-                type: string
-                format: binary
-            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-              schema:
-                type: string
-                format: binary
             application/json:
               schema:
-                type: string
-                format: binary
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: File uploaded successfully
+                  job_id:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  filename:
+                    type: string
+                    example: example_catalog.xlsx
         '400':
           description: Missing file or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: File too large
           content:
             application/json:
               schema:
@@ -100,7 +110,7 @@ paths:
   /api/analyze:
     post:
       summary: Analyze file structure
-      description: Analyze a catalog file's structure without fully processing it
+      description: Analyze a catalog file's structure without fully processing it. You can either upload a new file or reference a previously uploaded file using a job_id. The response includes a job_id that should be used with the /api/map/{job_id} endpoint for the next step in the workflow.
       operationId: analyzeFile
       requestBody:
         required: true
@@ -112,9 +122,14 @@ paths:
                 file:
                   type: string
                   format: binary
-                  description: The catalog file to analyze
-              required:
-                - file
+                  description: The catalog file to analyze (required if job_id is not provided)
+                job_id:
+                  type: string
+                  description: Job ID from a previous upload (required if file is not provided)
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+              oneOf:
+                - required: [file]
+                - required: [job_id]
       responses:
         '200':
           description: File analyzed successfully
@@ -123,42 +138,50 @@ paths:
               schema:
                 type: object
                 properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: File analyzed successfully
+                  job_id:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                    description: Job ID to use with the /api/map/{job_id} endpoint for the next step
+                  field_mappings:
+                    type: object
+                    description: Potential field mappings detected in the file
+                  column_info:
+                    type: object
+                    description: Analysis of columns in the file
+                  data_quality:
+                    type: array
+                    description: Data quality issues detected in the file
+                    items:
+                      type: object
                   structure:
                     type: object
                     properties:
-                      column_types:
-                        type: object
-                        additionalProperties:
-                          type: object
-                          properties:
-                            type:
-                              type: string
                       row_count:
                         type: integer
+                        example: 1000
                       column_count:
                         type: integer
-                  sample_data:
-                    type: array
-                    items:
-                      type: object
-                  columns:
-                    type: array
-                    items:
-                      type: string
-                  llm_info:
-                    type: object
-                    properties:
-                      model_id:
-                        type: string
-                        example: microsoft/phi-2
-                      quantization:
-                        type: string
-                        example: 4bit
-                      max_tokens:
+                        example: 15
+                      effective_rows:
                         type: integer
-                        example: 1024
+                        example: 950
+                      data_rows:
+                        type: integer
+                        example: 950
         '400':
-          description: Missing file
+          description: Missing file or invalid job_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: File not found for the provided job ID
           content:
             application/json:
               schema:
@@ -169,31 +192,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/map-fields:
+
+  /api/map/{job_id}:
     post:
-      summary: Map fields
-      description: Map fields from input columns to standardized format
-      operationId: mapFields
+      summary: Map fields using job ID
+      description: Map fields to standard schema using a previously analyzed file. This endpoint should be used after calling the /api/analyze endpoint, using the job_id returned from that call.
+      operationId: mapFieldsWithJobId
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job ID from a previous analyze operation
+          schema:
+            type: string
+            example: "550e8400-e29b-41d4-a716-446655440000"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                columns:
-                  type: array
-                  items:
-                    type: string
-                  description: Column names from the input file
-                sample_data:
-                  type: array
-                  items:
-                    type: object
-                  description: Sample rows from the input file
-              required:
-                - columns
-                - sample_data
+                mappings:
+                  type: object
+                  description: Optional user-specified mappings to override automatic mappings
+                  example: {"Product Code": "SKU", "Description": "Short Description"}
       responses:
         '200':
           description: Fields mapped successfully
@@ -202,34 +225,30 @@ paths:
               schema:
                 type: object
                 properties:
-                  mappings:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Fields mapped successfully
+                  mapping_results:
+                    type: object
+                    description: Results of the mapping operation
+                  sample_data:
                     type: array
                     items:
                       type: object
-                      properties:
-                        source_field:
-                          type: string
-                        target_field:
-                          type: string
-                        confidence:
-                          type: number
-                          format: float
-                        reasoning:
-                          type: string
+                    description: Sample of mapped data
+                  missing_required:
+                    type: array
+                    items:
+                      type: string
+                    description: Required fields that could not be mapped
                   llm_stats:
                     type: object
-                    properties:
-                      total_generations:
-                        type: integer
-                      total_tokens_generated:
-                        type: integer
-                      average_generation_time:
-                        type: number
-                        format: float
-                      cache_hits:
-                        type: integer
-        '400':
-          description: Invalid request data
+                    description: Statistics about LLM usage during mapping
+        '404':
+          description: Invalid job ID
           content:
             application/json:
               schema:

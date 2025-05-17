@@ -146,40 +146,56 @@ def analyze_file():
     import uuid
     from datetime import datetime
 
-    job_id = str(uuid.uuid4())
-    job = {
-        'id': job_id,
-        'status': 'pending',
-        'progress': 0,
-        'created_at': datetime.now().isoformat(),
-        'error': None
-    }
+    # Check if job_id is provided in the request
+    existing_job_id = request.form.get('job_id')
 
-    # Store job in active_jobs dictionary
-    active_jobs[job_id] = job
+    if existing_job_id and existing_job_id in active_jobs:
+        # Use existing job
+        job_id = existing_job_id
+        job = active_jobs[job_id]
+        file_path = job.get('file_path')
 
-    # Get file from request
-    if 'file' not in request.files:
-        job['status'] = 'error'
-        job['error'] = 'No file provided'
-        return jsonify({'error': 'No file provided'}), 400
+        if not file_path or not os.path.exists(file_path):
+            return jsonify({'error': 'File not found for the provided job ID'}), 404
 
-    file = request.files['file']
-    if file.filename == '':
-        job['status'] = 'error'
-        job['error'] = 'No file selected'
-        return jsonify({'error': 'No file selected'}), 400
+        logger.info(f"Using existing file for job {job_id}")
+    else:
+        # Create new job
+        job_id = str(uuid.uuid4())
+        job = {
+            'id': job_id,
+            'status': 'pending',
+            'progress': 0,
+            'created_at': datetime.now().isoformat(),
+            'error': None
+        }
 
-    # Save file temporarily
-    try:
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(UPLOAD_DIR, filename)
-        file.save(file_path)
-        job['file_path'] = file_path
-    except Exception as e:
-        job['status'] = 'error'
-        job['error'] = f'Error saving file: {str(e)}'
-        return jsonify({'error': f'Error saving file: {str(e)}'}), 500
+        # Store job in active_jobs dictionary
+        active_jobs[job_id] = job
+
+        # Get file from request
+        if 'file' not in request.files:
+            job['status'] = 'error'
+            job['error'] = 'No file provided'
+            return jsonify({'error': 'No file provided or job ID not found'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            job['status'] = 'error'
+            job['error'] = 'No file selected'
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Save file temporarily
+        try:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_DIR, filename)
+            file.save(file_path)
+            job['file_path'] = file_path
+            job['filename'] = filename
+        except Exception as e:
+            job['status'] = 'error'
+            job['error'] = f'Error saving file: {str(e)}'
+            return jsonify({'error': f'Error saving file: {str(e)}'}), 500
 
     try:
         # Update job status
@@ -214,6 +230,7 @@ def analyze_file():
         return jsonify({
             'success': True,
             'message': 'File analyzed successfully',
+            'job_id': job_id,  # Include job_id in the response
             'field_mappings': field_mappings,
             'column_info': structure_info.get('column_analysis', {}),
             'data_quality': structure_info.get('data_quality_issues', []),
