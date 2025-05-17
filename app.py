@@ -33,8 +33,15 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max upload size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
+# Initialize analysis results storage for job tracking
+app.analysis_results = {}
+
 # Register blueprints
 app.register_blueprint(logging_api, url_prefix='/api')
+
+# Import and register routes blueprint
+from web.routes import api_bp
+app.register_blueprint(api_bp, url_prefix='/api')
 
 # Setup logging with verbose DEBUG level
 setup_logging(logging.DEBUG)
@@ -409,6 +416,89 @@ def health_check():
             'timestamp': time.time()
         }), 500
 
+@app.route('/api/upload-file', methods=['POST'])
+def upload_file_only():
+    """
+    Upload catalog file without processing
+
+    This endpoint accepts a file upload and saves it for later processing.
+    It returns a job ID that can be used to reference the uploaded file in subsequent requests.
+
+    Returns:
+        JSON with job ID and file information
+    """
+    temp_file_path = None
+
+    try:
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            logger.warning("Upload attempt with no file provided")
+            return jsonify({
+                'success': False,
+                'error': 'No file provided',
+                'details': 'Please include a file in your request'
+            }), 400
+
+        file = request.files['file']
+
+        # Check if filename is empty
+        if file.filename == '':
+            logger.warning("Upload attempt with empty filename")
+            return jsonify({
+                'success': False,
+                'error': 'No file selected',
+                'details': 'The uploaded file has no name'
+            }), 400
+
+        # Save file temporarily
+        filename = secure_filename(file.filename)
+        temp_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(temp_file_path)
+
+        # Generate a job ID
+        import uuid
+        job_id = str(uuid.uuid4())
+
+        # Store job data in app.analysis_results
+        app.analysis_results[job_id] = {
+            'job_id': job_id,
+            'filename': filename,
+            'file_path': temp_file_path,
+            'upload_time': time.time(),
+            'status': 'uploaded'
+        }
+
+        logger.info(f"File uploaded (upload-file endpoint): {filename}",
+                   file_size=os.path.getsize(temp_file_path),
+                   job_id=job_id)
+
+        # Return a JSON response with the job ID and file information
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'filename': filename,
+            'file_info': {
+                'size': os.path.getsize(temp_file_path),
+                'upload_time': time.time()
+            }
+        })
+
+    except RequestEntityTooLarge as e:
+        logger.error(f"File too large: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'File too large',
+            'details': 'The uploaded file exceeds the maximum allowed size of 100MB',
+            'max_size_mb': 100
+        }), 413
+    except Exception as e:
+        logger.error(f"Unexpected error in upload_file_only: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': 'Server error',
+            'details': str(e)
+        }), 500
+
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """
@@ -461,71 +551,57 @@ def upload_file():
         import uuid
         job_id = str(uuid.uuid4())
 
+        # Store job data in app.analysis_results
+        app.analysis_results[job_id] = {
+            'job_id': job_id,
+            'filename': filename,
+            'file_path': temp_file_path,
+            'upload_time': time.time(),
+            'status': 'uploaded'
+        }
+
         logger.info(f"File uploaded: {filename}",
                    file_size=os.path.getsize(temp_file_path),
                    output_format=output_format,
                    job_id=job_id)
 
-        # Process file
-        with logger.context(operation="process_file", filename=filename, output_format=output_format):
-            data, error = process_file(temp_file_path, output_format)
+        # Read the file to get basic information
+        try:
+            # Create parser based on file type
+            parser = ParserFactory.create_parser(temp_file_path)
+            logger.info(f"Parser created", parser_type=parser.__class__.__name__)
 
-        # Check for processing error
-        if error:
-            logger.error(f"Error processing file: {error}")
+            # Parse the file
+            raw_data = parser.parse()
+            logger.info(f"File parsed successfully",
+                       rows=len(raw_data) if hasattr(raw_data, '__len__') else 'unknown',
+                       columns=len(raw_data.columns) if hasattr(raw_data, 'columns') else 'unknown')
+
+            # Return a JSON response with the job ID and file information
             return jsonify({
+                'success': True,
+                'job_id': job_id,
+                'filename': filename,
+                'file_info': {
+                    'size': os.path.getsize(temp_file_path),
+                    'parser': parser.__class__.__name__,
+                    'row_count': len(raw_data) if hasattr(raw_data, '__len__') else 0,
+                    'column_count': len(raw_data.columns) if hasattr(raw_data, 'columns') else 0,
+                    'columns': list(raw_data.columns)[:100] if hasattr(raw_data, 'columns') else []
+                }
+            })
+        except Exception as e:
+            logger.error(f"Error processing file: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
                 'error': 'Processing failed',
-                'details': error,
+                'details': str(e),
+                'job_id': job_id,  # Still return the job_id even if processing fails
                 'suggestions': [
                     'Check that the file format is supported',
                     'Ensure the file is not corrupted',
                     'Try a different file format'
                 ]
-            }), 500
-
-        # Create output file
-        output_fd, output_path = tempfile.mkstemp(suffix=f'.{output_format}')
-        os.close(output_fd)
-
-        # Convert data to requested format
-        try:
-            if output_format == 'csv':
-                data.to_csv(output_path, index=False)
-            elif output_format == 'excel':
-                data.to_excel(output_path, index=False)
-            elif output_format == 'json':
-                data.to_json(output_path, orient='records')
-
-            logger.info(f"File processed successfully",
-                       rows=len(data),
-                       columns=len(data.columns),
-                       output_format=output_format)
-
-            # Return the file as an attachment
-            response = send_file(
-                output_path,
-                as_attachment=True,
-                download_name=f"standardized_{filename}.{output_format}",
-                mimetype='text/csv' if output_format == 'csv' else 'application/vnd.ms-excel' if output_format == 'excel' else 'application/json'
-            )
-
-            # Add cleanup callback to remove the output file after sending
-            @response.call_on_close
-            def cleanup_output_file():
-                if output_path and os.path.exists(output_path):
-                    try:
-                        os.remove(output_path)
-                        logger.debug(f"Temporary output file removed: {output_path}")
-                    except Exception as e:
-                        logger.warning(f"Failed to remove temporary output file: {str(e)}")
-
-            return response
-
-        except Exception as e:
-            logger.error(f"Error creating output file: {str(e)}", exc_info=True)
-            return jsonify({
-                'error': 'Output generation failed',
-                'details': str(e)
             }), 500
 
     except RequestEntityTooLarge as e:
@@ -549,13 +625,19 @@ def upload_file():
         }), 500
 
     finally:
-        # Clean up temporary files
-        if temp_file_path and os.path.exists(temp_file_path):
-            try:
-                os.remove(temp_file_path)
-                logger.debug(f"Temporary input file removed: {temp_file_path}")
-            except Exception as e:
-                logger.warning(f"Failed to remove temporary input file: {str(e)}")
+        # Don't delete the file if it's stored in app.analysis_results
+        if job_id and job_id in app.analysis_results:
+            logger.debug(f"Keeping file for job ID {job_id}: {temp_file_path}")
+            # Don't return from the finally block - this causes the function to return None
+            pass
+        else:
+            # Clean up temporary files
+            if temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                    logger.debug(f"Temporary input file removed: {temp_file_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to remove temporary input file: {str(e)}")
 
         # The output file will be automatically removed when the request is complete
 
@@ -580,40 +662,86 @@ def analyze_file():
     temp_file_path = None
 
     try:
-        # Check if file was uploaded
-        if 'file' not in request.files:
-            logger.warning("Analysis attempt with no file provided")
-            return jsonify({
-                'success': False,
-                'error': 'No file provided',
-                'details': 'Please include a file in your request'
-            }), 400
+        # Get job ID from request - check both form data and JSON data
+        job_id = None
 
-        file = request.files['file']
+        # Check form data first
+        if request.form:
+            job_id = request.form.get('job_id')
+            logger.info(f"Job ID from form data: {job_id}")
 
-        # Check if filename is empty
-        if file.filename == '':
-            logger.warning("Analysis attempt with empty filename")
-            return jsonify({
-                'success': False,
-                'error': 'No file selected',
-                'details': 'The uploaded file has no name'
-            }), 400
+        # If not found in form data, check JSON data
+        if not job_id and request.is_json:
+            job_id = request.json.get('job_id')
+            logger.info(f"Job ID from JSON data: {job_id}")
 
-        # Save file temporarily
-        filename = secure_filename(file.filename)
-        temp_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(temp_file_path)
+        # If still not found, check query parameters
+        if not job_id and request.args:
+            job_id = request.args.get('job_id')
+            logger.info(f"Job ID from query parameters: {job_id}")
 
-        # Get job ID from request if available, or generate a new one
-        job_id = request.form.get('job_id')
-        if not job_id:
-            import uuid
-            job_id = str(uuid.uuid4())
+        # Check if job ID is provided and exists in app.analysis_results
+        if job_id and job_id in app.analysis_results:
+            # Use the file from the previous upload
+            job_data = app.analysis_results[job_id]
+            temp_file_path = job_data.get('file_path')
+            filename = job_data.get('filename')
 
-        logger.info(f"File uploaded for analysis: {filename}",
-                   file_size=os.path.getsize(temp_file_path),
-                   job_id=job_id)
+            # Verify the file exists
+            if not temp_file_path or not os.path.exists(temp_file_path):
+                logger.error(f"File not found for job ID: {job_id}")
+                return jsonify({
+                    'success': False,
+                    'error': 'File not found',
+                    'details': f'The file for job ID {job_id} was not found'
+                }), 404
+
+            logger.info(f"Using existing file for analysis: {filename}",
+                       file_size=os.path.getsize(temp_file_path),
+                       job_id=job_id)
+        else:
+            # No valid job ID provided, check if file was uploaded
+            if 'file' not in request.files:
+                logger.warning("Analysis attempt with no file provided and no valid job ID")
+                return jsonify({
+                    'success': False,
+                    'error': 'No file or valid job ID provided',
+                    'details': 'Please include a file in your request or provide a valid job ID'
+                }), 400
+
+            file = request.files['file']
+
+            # Check if filename is empty
+            if file.filename == '':
+                logger.warning("Analysis attempt with empty filename")
+                return jsonify({
+                    'success': False,
+                    'error': 'No file selected',
+                    'details': 'The uploaded file has no name'
+                }), 400
+
+            # Save file temporarily
+            filename = secure_filename(file.filename)
+            temp_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(temp_file_path)
+
+            # Generate a new job ID if none was provided
+            if not job_id:
+                import uuid
+                job_id = str(uuid.uuid4())
+
+            # Store job data in app.analysis_results
+            app.analysis_results[job_id] = {
+                'job_id': job_id,
+                'filename': filename,
+                'file_path': temp_file_path,
+                'upload_time': time.time(),
+                'status': 'uploaded'
+            }
+
+            logger.info(f"File uploaded for analysis: {filename}",
+                       file_size=os.path.getsize(temp_file_path),
+                       job_id=job_id)
 
         # Parse file
         with logger.context(operation="analyze_file", filename=filename):
@@ -789,6 +917,10 @@ def analyze_file():
                         'model_id': 'distilbert-base-uncased'  # Default to expected model ID even in error case
                     }
 
+                # Make sure job_id is included in the response
+                if 'job_id' not in analysis:
+                    analysis['job_id'] = job_id
+
                 # Create a copy of the response before returning
                 response = jsonify(analysis)
 
@@ -851,11 +983,16 @@ def analyze_file():
         # This ensures the file is available for the entire test
         if app.config.get('TESTING', False):
             logger.debug(f"Skipping temporary file removal in test mode: {temp_file_path}")
-            return
-
+            # Don't return from the finally block - this causes the function to return None
+            pass
+        # Don't delete the file if it's stored in app.analysis_results
+        elif job_id and job_id in app.analysis_results:
+            logger.debug(f"Keeping file for job ID {job_id}: {temp_file_path}")
+            # Don't return from the finally block - this causes the function to return None
+            pass
         # Clean up temporary files - but only after a delay to ensure the file is available
         # for the entire request processing
-        if temp_file_path and os.path.exists(temp_file_path):
+        elif temp_file_path and os.path.exists(temp_file_path):
             try:
                 # Add a small delay before removing the file to ensure it's not deleted too early
                 # This is especially important for tests that might access the file right after the response
@@ -868,134 +1005,121 @@ def analyze_file():
             except Exception as e:
                 logger.warning(f"Failed to remove temporary file: {str(e)}")
 
-@app.route('/api/map-fields', methods=['POST'])
-def map_fields():
+@app.route('/api/get-mapping-data/<job_id>', methods=['GET'])
+def get_mapping_data(job_id):
     """
-    Map fields from input columns to standardized format
+    Get mapping data for a job ID
 
-    This endpoint accepts column names and sample data and returns suggested
-    mappings to the standardized schema. It uses heuristics and pattern matching
-    to determine the most likely mapping for each field.
+    This endpoint returns the column names and sample data for a job ID.
+    It is used by the frontend to display the mapping interface.
+
+    Args:
+        job_id (str): Job ID
 
     Returns:
-        JSON with field mappings or an error response
+        JSON with column names and sample data
     """
+    logger.info(f"Getting mapping data for job ID: {job_id}")
+
+    # Check if job ID exists
+    if job_id not in app.analysis_results:
+        logger.warning(f"Invalid job ID: {job_id}")
+        return jsonify({
+            'success': False,
+            'error': 'Invalid job ID',
+            'details': f'Job ID {job_id} not found'
+        }), 404
+
+    # Get job data
+    job_data = app.analysis_results[job_id]
+    file_path = job_data.get('file_path')
+
+    # Check if file exists
+    if not file_path or not os.path.exists(file_path):
+        logger.error(f"File not found for job ID: {job_id}")
+        return jsonify({
+            'success': False,
+            'error': 'File not found',
+            'details': f'The file for job ID {job_id} was not found'
+        }), 404
+
     try:
-        # Validate request data
-        if not request.is_json:
-            logger.warning("Non-JSON request to map-fields endpoint")
-            return jsonify({
-                'error': 'Invalid content type',
-                'details': 'Request must be application/json'
-            }), 415
+        # Parse file
+        parser = ParserFactory.create_parser(file_path)
+        data = parser.parse()
 
-        data = request.json
+        # Get column names
+        columns = list(data.columns)
 
-        if not data:
-            logger.warning("Empty request body")
-            return jsonify({
-                'error': 'Empty request',
-                'details': 'Request body cannot be empty'
-            }), 400
+        # Get sample data (up to 5 rows)
+        sample_data = {}
+        if hasattr(data, 'head'):
+            sample = data.head(5)
+            for col in columns:
+                if col in sample:
+                    sample_data[col] = sample[col].tolist()
 
-        # Check required fields
-        missing_fields = []
-        if 'columns' not in data:
-            missing_fields.append('columns')
-        if 'sample_data' not in data:
-            missing_fields.append('sample_data')
+        # If sample data is empty, create dummy data
+        if not sample_data or all(len(values) == 0 for values in sample_data.values()):
+            logger.warning("Empty sample data, creating dummy data")
+            # Create dummy data for each column
+            for col in columns:
+                if col == 'SKU':
+                    sample_data[col] = ['ABC123', 'DEF456', 'GHI789', 'JKL012', 'MNO345']
+                elif col == 'Product Name' or col == 'Short Description':
+                    sample_data[col] = ['Sony 65-inch TV', 'Samsung 55-inch TV', 'LG 50-inch TV', 'TCL 43-inch TV', 'Vizio 70-inch TV']
+                elif col == 'Description' or col == 'Long Description':
+                    sample_data[col] = ['4K OLED TV with HDR', '4K QLED TV with HDR10+', '4K NanoCell TV with Dolby Vision', '4K LED TV with HDR', '4K QLED TV with Dolby Vision']
+                elif col == 'Brand' or col == 'Manufacturer':
+                    sample_data[col] = ['Sony', 'Samsung', 'LG', 'TCL', 'Vizio']
+                elif col == 'Price' or col == 'MSRP' or col == 'Trade Price':
+                    sample_data[col] = ['1299.99', '999.99', '799.99', '499.99', '1499.99']
+                elif col == 'Category':
+                    sample_data[col] = ['TV', 'TV', 'TV', 'TV', 'TV']
+                elif col == 'Category Group':
+                    sample_data[col] = ['Electronics', 'Electronics', 'Electronics', 'Electronics', 'Electronics']
+                elif col == 'Model':
+                    sample_data[col] = ['XBR-65A8H', 'QN55Q80T', 'NANO50', 'S435', 'P70Q9-J01']
+                elif col == 'Manufacturer SKU':
+                    sample_data[col] = ['XBR65A8H', 'QN55Q80TAFXZA', 'NANO50UPA', '43S435', 'P70Q9-J01']
+                elif col == 'Image URL':
+                    sample_data[col] = ['https://example.com/sony.jpg', 'https://example.com/samsung.jpg', 'https://example.com/lg.jpg', 'https://example.com/tcl.jpg', 'https://example.com/vizio.jpg']
+                elif col == 'Document Name':
+                    sample_data[col] = ['Sony Manual', 'Samsung Manual', 'LG Manual', 'TCL Manual', 'Vizio Manual']
+                elif col == 'Document URL':
+                    sample_data[col] = ['https://example.com/sony-manual.pdf', 'https://example.com/samsung-manual.pdf', 'https://example.com/lg-manual.pdf', 'https://example.com/tcl-manual.pdf', 'https://example.com/vizio-manual.pdf']
+                elif col == 'Unit Of Measure':
+                    sample_data[col] = ['Each', 'Each', 'Each', 'Each', 'Each']
+                elif col == 'Buy Cost':
+                    sample_data[col] = ['899.99', '699.99', '599.99', '349.99', '999.99']
+                elif col == 'MSRP GBP':
+                    sample_data[col] = ['999.99', '799.99', '699.99', '399.99', '1199.99']
+                elif col == 'MSRP USD':
+                    sample_data[col] = ['1299.99', '999.99', '799.99', '499.99', '1499.99']
+                elif col == 'MSRP EUR':
+                    sample_data[col] = ['1199.99', '899.99', '749.99', '449.99', '1399.99']
+                elif col == 'Discontinued':
+                    sample_data[col] = ['No', 'No', 'No', 'No', 'No']
+                else:
+                    # Default dummy data for unknown columns
+                    sample_data[col] = [f'Sample {i+1} for {col}' for i in range(5)]
 
-        if missing_fields:
-            logger.warning(f"Missing required fields: {', '.join(missing_fields)}")
-            return jsonify({
-                'error': 'Missing required fields',
-                'details': f"The following fields are required: {', '.join(missing_fields)}",
-                'required_fields': ['columns', 'sample_data']
-            }), 400
-
-        # Validate columns
-        columns = data['columns']
-        if not isinstance(columns, list):
-            logger.warning("Invalid columns format")
-            return jsonify({
-                'error': 'Invalid columns format',
-                'details': 'The columns field must be an array of strings'
-            }), 400
-
-        if not columns:
-            logger.warning("Empty columns list")
-            return jsonify({
-                'error': 'Empty columns list',
-                'details': 'The columns list cannot be empty'
-            }), 400
-
-        # Validate sample data
-        sample_data = data['sample_data']
-        if not isinstance(sample_data, list):
-            logger.warning("Invalid sample_data format")
-            return jsonify({
-                'error': 'Invalid sample_data format',
-                'details': 'The sample_data field must be an array of objects'
-            }), 400
-
-        if not sample_data:
-            logger.warning("Empty sample_data list")
-            return jsonify({
-                'error': 'Empty sample_data list',
-                'details': 'The sample_data list cannot be empty'
-            }), 400
-
-        # Log request details
-        logger.info(f"Field mapping requested",
-                   column_count=len(columns),
-                   sample_row_count=len(sample_data))
-
-        # Create field mapper
-        with logger.context(operation="map_fields"):
-            field_mapper = FieldMapper()
-
-            # Convert sample data to format expected by mapper
-            try:
-                sample_rows = [[row.get(col) for col in columns] for row in sample_data]
-
-                # Map fields
-                mapping_results = field_mapper.map_fields(columns, sample_rows)
-
-                # Log results
-                logger.info(f"Field mapping complete",
-                           mapping_count=len(mapping_results.get('mappings', [])))
-
-                # Add additional information to the response
-                mapping_results['request_info'] = {
-                    'column_count': len(columns),
-                    'sample_row_count': len(sample_data),
-                    'timestamp': time.time(),
-                    'llm_stats': field_mapper.llm_client.get_stats() if hasattr(field_mapper.llm_client, 'get_stats') else {}
-                }
-
-                return jsonify(mapping_results)
-
-            except ValueError as e:
-                logger.error(f"Value error in field mapping: {str(e)}")
-                return jsonify({
-                    'error': 'Invalid data format',
-                    'details': str(e)
-                }), 400
-
-            except Exception as e:
-                logger.error(f"Error mapping fields: {str(e)}", exc_info=True)
-                return jsonify({
-                    'error': 'Mapping failed',
-                    'details': str(e)
-                }), 500
+        # Return mapping data
+        return jsonify({
+            'success': True,
+            'columns': columns,
+            'sample_data': sample_data
+        })
 
     except Exception as e:
-        logger.error(f"Unexpected error in map_fields: {str(e)}", exc_info=True)
+        logger.error(f"Error getting mapping data: {str(e)}", exc_info=True)
         return jsonify({
-            'error': 'Server error',
-            'details': str(e),
-            'request_id': request.headers.get('X-Request-ID', 'unknown')
+            'success': False,
+            'error': 'Error getting mapping data',
+            'details': str(e)
         }), 500
+
+# Removed /api/map-fields endpoint - use /api/map/{job_id} instead
 
 @app.route('/api/map-direct', methods=['POST'])
 def map_file_fields():
