@@ -779,10 +779,29 @@ class FieldMapper:
         # Create a copy of the input data
         result = data.copy()
 
+        # Process mappings
+        rename_dict = {}
+        direct_values = {}
+
+        for target_field, source in mapping_dict.items():
+            # Check if this is a direct value (starts with __DIRECT_VALUE__:)
+            if isinstance(source, str) and source.startswith('__DIRECT_VALUE__:'):
+                # Extract the direct value
+                direct_value = source.split(':', 1)[1]
+                logger.info(f"Found direct value for {target_field}: {direct_value}")
+                direct_values[target_field] = direct_value
+            elif source in result.columns:
+                # This is a column mapping
+                rename_dict[source] = target_field
+
         # Rename columns according to the mapping
-        rename_dict = {src: tgt for src, tgt in mapping_dict.items() if src in result.columns}
         if rename_dict:
             result = result.rename(columns=rename_dict)
+
+        # Apply direct values
+        for field, value in direct_values.items():
+            logger.info(f"Setting direct value for {field}: {value}")
+            result[field] = value
 
         # Add missing required fields
         for field in REQUIRED_FIELDS:

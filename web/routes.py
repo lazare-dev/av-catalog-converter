@@ -149,11 +149,26 @@ def analyze_file():
     # Check if job_id is provided in the request
     existing_job_id = request.form.get('job_id')
 
+    # Get company name if provided
+    company_name = request.form.get('company', '')
+    logger.info(f"Company name provided: {company_name}")
+
     if existing_job_id and existing_job_id in active_jobs:
         # Use existing job
         job_id = existing_job_id
         job = active_jobs[job_id]
         file_path = job.get('file_path')
+
+        # ALWAYS update company name if provided
+        if company_name:
+            job['company'] = company_name
+            logger.info(f"Updated company name for job {job_id}: {company_name}")
+
+            # Make sure to store the company name in field_mappings too
+            if 'field_mappings' not in job:
+                job['field_mappings'] = {}
+            job['field_mappings']['Manufacturer'] = f"__DIRECT_VALUE__:{company_name}"
+            logger.info(f"FORCED company name into Manufacturer field mapping for job {job_id}")
 
         if not file_path or not os.path.exists(file_path):
             return jsonify({'error': 'File not found for the provided job ID'}), 404
@@ -167,8 +182,15 @@ def analyze_file():
             'status': 'pending',
             'progress': 0,
             'created_at': datetime.now().isoformat(),
-            'error': None
+            'error': None,
+            'company': company_name,  # Store company name in job data
+            'field_mappings': {}  # Initialize field_mappings
         }
+
+        # ALWAYS set the company name in field_mappings for Manufacturer field
+        if company_name:
+            job['field_mappings']['Manufacturer'] = f"__DIRECT_VALUE__:{company_name}"
+            logger.info(f"FORCED company name into Manufacturer field mapping for new job {job_id}")
 
         # Store job in active_jobs dictionary
         active_jobs[job_id] = job
@@ -235,6 +257,11 @@ def analyze_file():
                         'sample_data': job.get('sample_data', {})
                     }
 
+                    # Include company name if available
+                    if 'company' in job and job['company']:
+                        job_data['company'] = job['company']
+                        logger.info(f"Including company name '{job['company']}' in app.analysis_results")
+
                     # Store in app.analysis_results
                     app.analysis_results[job_id] = job_data
                     logger.info(f"Stored job ID in app.analysis_results: {job_id}")
@@ -290,6 +317,12 @@ def analyze_file():
                     except Exception as e:
                         logger.warning(f"Error generating field mappings: {str(e)}, using empty mappings")
                         field_mappings = {}
+
+                # If company name is provided, ALWAYS use it for Manufacturer field
+                if 'company' in job and job['company']:
+                    logger.info(f"Using company name '{job['company']}' for Manufacturer field")
+                    # Use a special prefix to indicate this is a direct value, not a column name
+                    field_mappings['Manufacturer'] = f"__DIRECT_VALUE__:{job['company']}"
 
                 # Store field mappings in job data
                 job['field_mappings'] = field_mappings
@@ -347,6 +380,15 @@ def analyze_file():
                         else:
                             values.append(val)
                     sample_data[col] = values
+
+        # Make sure company name is in field_mappings
+        if 'company' in job and job['company']:
+            logger.info(f"FORCING company name '{job['company']}' into Manufacturer field in response")
+            field_mappings['Manufacturer'] = f"__DIRECT_VALUE__:{job['company']}"
+
+        # Log the mappings being returned
+        logger.info(f"Final mappings being returned: {field_mappings}")
+        logger.info(f"Manufacturer mapping: {field_mappings.get('Manufacturer', 'NOT SET')}")
 
         return jsonify({
             'success': True,

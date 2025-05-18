@@ -1509,6 +1509,15 @@ def get_mapping_data(job_id):
                 elif job_id in active_jobs and 'structure_info' in active_jobs[job_id]:
                     structure_info = active_jobs[job_id]['structure_info']
 
+                # Check if company name is available in job data
+                company_name = None
+                if job_id in app.analysis_results and 'company' in app.analysis_results[job_id]:
+                    company_name = app.analysis_results[job_id]['company']
+                    logger.info(f"Found company name in app.analysis_results: {company_name}")
+                elif job_id in active_jobs and 'company' in active_jobs[job_id]:
+                    company_name = active_jobs[job_id]['company']
+                    logger.info(f"Found company name in active_jobs: {company_name}")
+
                 # First check if we have field_mappings in the analyze response (highest priority)
                 if job_id in app.analysis_results and 'analyze_response' in app.analysis_results[job_id] and 'field_mappings' in app.analysis_results[job_id]['analyze_response']:
                     logger.info(f"Using field_mappings from analyze_response in app.analysis_results")
@@ -1612,8 +1621,27 @@ def get_mapping_data(job_id):
                         # Fallback to direct mapping
                         field_mappings = field_mapper.map_columns_by_name(columns)
                         logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
-                else:
-                    # Use direct mapping based on column names
+
+                # If company name is available, ALWAYS use it for Manufacturer field
+                if company_name:
+                    logger.info(f"Using company name '{company_name}' for Manufacturer field")
+                    # Use a special prefix to indicate this is a direct value, not a column name
+                    field_mappings['Manufacturer'] = f"__DIRECT_VALUE__:{company_name}"
+
+                    # Make sure to store this mapping in both app.analysis_results and active_jobs
+                    if job_id in app.analysis_results:
+                        if 'field_mappings' not in app.analysis_results[job_id]:
+                            app.analysis_results[job_id]['field_mappings'] = {}
+                        app.analysis_results[job_id]['field_mappings']['Manufacturer'] = f"__DIRECT_VALUE__:{company_name}"
+                        logger.info(f"Stored Manufacturer mapping in app.analysis_results for job ID: {job_id}")
+
+                    if job_id in active_jobs:
+                        if 'field_mappings' not in active_jobs[job_id]:
+                            active_jobs[job_id]['field_mappings'] = {}
+                        active_jobs[job_id]['field_mappings']['Manufacturer'] = f"__DIRECT_VALUE__:{company_name}"
+                        logger.info(f"Stored Manufacturer mapping in active_jobs for job ID: {job_id}")
+                elif not field_mappings:
+                    # Use direct mapping based on column names only if we still don't have any mappings
                     field_mappings = field_mapper.map_columns_by_name(columns)
                     logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
 
@@ -1686,15 +1714,34 @@ def get_mapping_data(job_id):
             analyze_response = active_jobs[job_id]['analyze_response']
             logger.info(f"Found analyze_response in active_jobs")
 
+        # Get company name from job data
+        company_name = None
+        if job_id in app.analysis_results and 'company' in app.analysis_results[job_id]:
+            company_name = app.analysis_results[job_id]['company']
+            logger.info(f"Found company name in app.analysis_results: {company_name}")
+        elif 'active_jobs' in locals() and job_id in active_jobs and 'company' in active_jobs[job_id]:
+            company_name = active_jobs[job_id]['company']
+            logger.info(f"Found company name in active_jobs: {company_name}")
+
+        # FORCE the company name into the field_mappings
+        if company_name:
+            logger.info(f"FORCING company name '{company_name}' into Manufacturer field in field_mappings")
+            field_mappings['Manufacturer'] = f"__DIRECT_VALUE__:{company_name}"
+
         # Prepare response data
         response_data = {
             'success': True,
             'columns': columns,
             'source_columns': columns,  # Add source_columns for compatibility
             'sample_data': sample_data,
-            'mappings': field_mappings,
+            'mappings': field_mappings,  # Use the updated field_mappings with Manufacturer
+            'field_mappings': field_mappings,  # Include field_mappings directly
             'required_fields': ["SKU", "Short Description", "Manufacturer"]  # Add required fields
         }
+
+        # Log the mappings being returned
+        logger.info(f"Final mappings being returned: {field_mappings}")
+        logger.info(f"Manufacturer mapping: {field_mappings.get('Manufacturer', 'NOT SET')}")
 
         # Include analyze_response if available
         if analyze_response:
