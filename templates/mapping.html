@@ -542,7 +542,7 @@
             console.log('Sending validation request with job_id:', document.getElementById('job-id').value);
             console.log('Mappings being sent:', mappings);
 
-            fetch('/api/validate-mapping', {
+            fetch('/validate-mapping', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -630,7 +630,7 @@
             console.log('Complete mappings object for processing:', mappings);
 
             // Send to process endpoint
-            fetch(`/api/process/${jobId}`, {
+            fetch(`/process/${jobId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -682,7 +682,7 @@
             function fetchWithRetry() {
                 console.log(`Attempt ${retryCount + 1} to fetch mapping data for job ID: ${jobId}`);
 
-                fetch(`/api/get-mapping-data/${jobId}`)
+                fetch(`/get-mapping-data/${jobId}`)
                     .then(response => {
                         console.log('Response status:', response.status);
 
