@@ -37,7 +37,7 @@ services:
       - CYPRESS_INSTALL_BINARY=0  # Skip Cypress binary download during npm install
     # Use the entrypoint script to handle test execution and app startup
     entrypoint: ["/app/docker/entrypoint.sh"]
-    command: ["--api-only", "--port", "8080"]
+    command: ["--port", "8080"]
     restart: unless-stopped
     # Allocate more resources to the container
     deploy:

@@ -121,3 +121,4 @@ test_results/
 !tests/fixtures/*.pdf
 !tests/fixtures/*.json
 !tests/fixtures/*.xml
+test_results/test_report.html

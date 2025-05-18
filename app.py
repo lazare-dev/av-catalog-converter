@@ -140,6 +140,21 @@ def serve(path):
         logger.error(f"Frontend build directory not found: {frontend_path}")
         return jsonify({"error": "Frontend not built"}), 500
 
+    # Special handling for JS and CSS files
+    if path.endswith('.js'):
+        js_path = os.path.join(frontend_path, 'js', os.path.basename(path))
+        logger.info(f"Looking for JS file: {js_path}")
+        if os.path.exists(js_path):
+            logger.info(f"Serving JS file: {js_path}")
+            return send_from_directory(os.path.join(frontend_path, 'js'), os.path.basename(path), mimetype='application/javascript')
+
+    if path.endswith('.css'):
+        css_path = os.path.join(frontend_path, 'css', os.path.basename(path))
+        logger.info(f"Looking for CSS file: {css_path}")
+        if os.path.exists(css_path):
+            logger.info(f"Serving CSS file: {css_path}")
+            return send_from_directory(os.path.join(frontend_path, 'css'), os.path.basename(path), mimetype='text/css')
+
     # Check if the requested file exists
     if path and os.path.exists(os.path.join(frontend_path, path)):
         logger.info(f"Serving file: {path}")
@@ -151,6 +166,19 @@ def serve(path):
         static_path = path[7:]  # Remove 'static/' prefix
         logger.info(f"Static file request detected: {static_path}")
         return serve_static(static_path)
+
+    # Handle direct requests to JS and CSS files in their directories
+    if path.startswith('js/') and path.endswith('.js'):
+        js_file = path[3:]  # Remove 'js/' prefix
+        js_path = os.path.join(frontend_path, 'js')
+        logger.info(f"Serving JS file from js directory: {js_file}")
+        return send_from_directory(js_path, js_file, mimetype='application/javascript')
+
+    if path.startswith('css/') and path.endswith('.css'):
+        css_file = path[4:]  # Remove 'css/' prefix
+        css_path = os.path.join(frontend_path, 'css')
+        logger.info(f"Serving CSS file from css directory: {css_file}")
+        return send_from_directory(css_path, css_file, mimetype='text/css')
 
     # Otherwise, serve the index.html file
     logger.info(f"Serving index.html")
@@ -416,6 +444,130 @@ def health_check():
             'timestamp': time.time()
         }), 500
 
+@app.route('/api/validate-mapping', methods=['POST', 'OPTIONS'])
+def validate_mapping():
+    """
+    Validate field mappings
+
+    Returns:
+        JSON response with validation results
+    """
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'success': True})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        return response
+
+    # Check if request is JSON
+    if not request.is_json:
+        logger.warning("Non-JSON request to validate-mapping endpoint")
+        return jsonify({
+            'success': False,
+            'error': 'Invalid content type',
+            'details': 'Request must be application/json'
+        }), 415
+
+    # Get request data
+    data = request.json
+
+    # Check required fields
+    if 'job_id' not in data:
+        logger.warning("Missing job_id in validate-mapping request")
+        return jsonify({
+            'success': False,
+            'error': 'Missing job_id',
+            'details': 'The job_id field is required'
+        }), 400
+
+    if 'mappings' not in data:
+        logger.warning("Missing mappings in validate-mapping request")
+        return jsonify({
+            'success': False,
+            'error': 'Missing mappings',
+            'details': 'The mappings field is required'
+        }), 400
+
+    job_id = data['job_id']
+    mappings = data['mappings']
+
+    # Log the request data for debugging
+    logger.info(f"Validate mapping request received for job ID: {job_id}")
+    logger.info(f"Mappings: {mappings}")
+
+    # Check if job exists in app.analysis_results
+    if job_id not in app.analysis_results:
+        # Try to get job from active_jobs in web.routes
+        try:
+            from web.routes import active_jobs
+            if job_id in active_jobs:
+                # Copy job data from active_jobs to app.analysis_results
+                app.analysis_results[job_id] = active_jobs[job_id].copy()
+                logger.info(f"Copied job data from active_jobs to app.analysis_results: {job_id}")
+            else:
+                logger.warning(f"Invalid job ID in validate-mapping request: {job_id}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid job ID',
+                    'details': f'Job ID {job_id} not found in active_jobs'
+                }), 404
+        except Exception as e:
+            logger.error(f"Error checking active_jobs: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid job ID',
+                'details': f'Job ID {job_id} not found: {str(e)}'
+            }), 404
+
+    # Validate mappings
+    from utils.helpers.validation_helpers import validate_mapping as validate_mapping_helper
+    from config.schema import REQUIRED_FIELDS
+
+    logger.info(f"Validating mappings for job {job_id}: {mappings}")
+
+    # Validate the mappings
+    issues = validate_mapping_helper(mappings)
+
+    # Check if there are any issues
+    has_issues = any(len(issues[key]) > 0 for key in issues)
+
+    # Log validation results
+    if has_issues:
+        logger.warning(f"Validation issues found in field mapping")
+        for issue_type, issue_list in issues.items():
+            if issue_list:
+                logger.warning(f"{issue_type}: {', '.join(issue_list)}")
+    else:
+        logger.info(f"Field mapping validation successful")
+
+    # Store validated mappings in job data
+    if not has_issues:
+        app.analysis_results[job_id]['validated_mappings'] = mappings
+        app.analysis_results[job_id]['status'] = 'validated'
+
+        # Also store in active_jobs if available
+        try:
+            from web.routes import active_jobs
+            if job_id in active_jobs:
+                active_jobs[job_id]['validated_mappings'] = mappings
+                active_jobs[job_id]['status'] = 'validated'
+                logger.info(f"Stored validated mappings in active_jobs for job ID: {job_id}")
+        except Exception as e:
+            logger.error(f"Error storing validated mappings in active_jobs: {str(e)}")
+
+    # Return validation results
+    response = jsonify({
+        'success': not has_issues,
+        'issues': issues,
+        'job_id': job_id
+    })
+
+    # Add CORS headers
+    response.headers.add('Access-Control-Allow-Origin', '*')
+
+    return response
+
 @app.route('/api/upload-file', methods=['POST'])
 def upload_file_only():
     """
@@ -459,14 +611,26 @@ def upload_file_only():
         import uuid
         job_id = str(uuid.uuid4())
 
-        # Store job data in app.analysis_results
-        app.analysis_results[job_id] = {
+        # Create job data
+        job_data = {
             'job_id': job_id,
             'filename': filename,
             'file_path': temp_file_path,
             'upload_time': time.time(),
-            'status': 'uploaded'
+            'status': 'uploaded',
+            'field_mappings': {}  # Initialize empty field mappings
         }
+
+        # Store job data in app.analysis_results
+        app.analysis_results[job_id] = job_data
+
+        # Also store in active_jobs for consistency
+        try:
+            from web.routes import active_jobs
+            active_jobs[job_id] = job_data.copy()
+            logger.info(f"Stored job ID in both app.analysis_results and active_jobs: {job_id}")
+        except Exception as e:
+            logger.warning(f"Could not store job ID in active_jobs: {str(e)}")
 
         logger.info(f"File uploaded (upload-file endpoint): {filename}",
                    file_size=os.path.getsize(temp_file_path),
@@ -551,14 +715,26 @@ def upload_file():
         import uuid
         job_id = str(uuid.uuid4())
 
-        # Store job data in app.analysis_results
-        app.analysis_results[job_id] = {
+        # Create job data
+        job_data = {
             'job_id': job_id,
             'filename': filename,
             'file_path': temp_file_path,
             'upload_time': time.time(),
-            'status': 'uploaded'
+            'status': 'uploaded',
+            'field_mappings': {}  # Initialize empty field mappings
         }
+
+        # Store job data in app.analysis_results
+        app.analysis_results[job_id] = job_data
+
+        # Also store in active_jobs for consistency
+        try:
+            from web.routes import active_jobs
+            active_jobs[job_id] = job_data.copy()
+            logger.info(f"Stored job ID in both app.analysis_results and active_jobs: {job_id}")
+        except Exception as e:
+            logger.warning(f"Could not store job ID in active_jobs: {str(e)}")
 
         logger.info(f"File uploaded: {filename}",
                    file_size=os.path.getsize(temp_file_path),
@@ -665,6 +841,9 @@ def analyze_file():
         # Get job ID from request - check both form data and JSON data
         job_id = None
 
+        # Log all available job IDs for debugging
+        logger.info(f"Available job IDs at start of analyze: {list(app.analysis_results.keys())}")
+
         # Check form data first
         if request.form:
             job_id = request.form.get('job_id')
@@ -680,12 +859,47 @@ def analyze_file():
             job_id = request.args.get('job_id')
             logger.info(f"Job ID from query parameters: {job_id}")
 
-        # Check if job ID is provided and exists in app.analysis_results
-        if job_id and job_id in app.analysis_results:
-            # Use the file from the previous upload
-            job_data = app.analysis_results[job_id]
-            temp_file_path = job_data.get('file_path')
-            filename = job_data.get('filename')
+        # Import active_jobs from web.routes if available
+        try:
+            from web.routes import active_jobs
+            logger.info(f"Available job IDs in active_jobs: {list(active_jobs.keys())}")
+        except ImportError:
+            logger.warning("Could not import active_jobs from web.routes")
+            active_jobs = {}
+
+        # Check if job ID is provided and exists in app.analysis_results or active_jobs
+        if job_id:
+            logger.info(f"Job ID provided: {job_id}")
+
+            # Check app.analysis_results first
+            if job_id in app.analysis_results:
+                logger.info(f"Found job ID in app.analysis_results: {job_id}")
+                job_data = app.analysis_results[job_id]
+                temp_file_path = job_data.get('file_path')
+                filename = job_data.get('filename')
+
+                # Ensure job data is also in active_jobs for consistency
+                if job_id not in active_jobs:
+                    logger.info(f"Copying job data from app.analysis_results to active_jobs: {job_id}")
+                    active_jobs[job_id] = job_data.copy()
+            # Then check active_jobs
+            elif job_id in active_jobs:
+                logger.info(f"Found job ID in active_jobs: {job_id}")
+                job_data = active_jobs[job_id]
+                temp_file_path = job_data.get('file_path')
+                filename = job_data.get('filename')
+
+                # Ensure job data is also in app.analysis_results for consistency
+                if job_id not in app.analysis_results:
+                    logger.info(f"Copying job data from active_jobs to app.analysis_results: {job_id}")
+                    app.analysis_results[job_id] = job_data.copy()
+            else:
+                logger.warning(f"Job ID not found in either storage: {job_id}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid job ID',
+                    'details': f'Job ID {job_id} not found'
+                }), 404
 
             # Verify the file exists
             if not temp_file_path or not os.path.exists(temp_file_path):
@@ -709,6 +923,8 @@ def analyze_file():
                     'details': 'Please include a file in your request or provide a valid job ID'
                 }), 400
 
+            logger.info("No valid job ID found, but file was included in the request. Using the file directly.")
+
             file = request.files['file']
 
             # Check if filename is empty
@@ -730,14 +946,30 @@ def analyze_file():
                 import uuid
                 job_id = str(uuid.uuid4())
 
-            # Store job data in app.analysis_results
-            app.analysis_results[job_id] = {
+            # Create job data
+            job_data = {
                 'job_id': job_id,
                 'filename': filename,
                 'file_path': temp_file_path,
                 'upload_time': time.time(),
-                'status': 'uploaded'
+                'status': 'uploaded',
+                'field_mappings': {}  # Initialize empty field mappings
             }
+
+            # Store job data in app.analysis_results
+            app.analysis_results[job_id] = job_data
+
+            # Also store in active_jobs for consistency
+            try:
+                from web.routes import active_jobs
+                active_jobs[job_id] = job_data.copy()
+                logger.info(f"Stored job ID in both app.analysis_results and active_jobs: {job_id}")
+            except Exception as e:
+                logger.warning(f"Could not store job ID in active_jobs: {str(e)}")
+
+            # Log the job ID and all available job IDs for debugging
+            logger.info(f"Stored job ID: {job_id}")
+            logger.info(f"Available job IDs after upload: {list(app.analysis_results.keys())}")
 
             logger.info(f"File uploaded for analysis: {filename}",
                        file_size=os.path.getsize(temp_file_path),
@@ -785,6 +1017,38 @@ def analyze_file():
                 # Prepare for analysis response
                 # (analysis data is now directly in the response)
 
+                # Generate field mappings for the analyzed data
+                try:
+                    # Create field mapper
+                    from services.mapping.field_mapper import FieldMapper
+                    field_mapper = FieldMapper()
+
+                    # Get column names
+                    columns = list(raw_data.columns)[:100] if hasattr(raw_data, 'columns') else []
+
+                    # Generate field mappings using direct mapping
+                    field_mappings = field_mapper.map_columns_by_name(columns)
+                    logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
+
+                    # If structure_info has field_mappings, use those instead
+                    if structure_info and 'field_mappings' in structure_info and structure_info['field_mappings']:
+                        logger.info(f"Using field_mappings from structure_info")
+                        # Convert from the structure_info format to the format expected by the frontend
+                        for target_field, mapping_info in structure_info['field_mappings'].items():
+                            if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                                field_mappings[target_field] = mapping_info['column']
+
+                    # Store the field mappings in the job data
+                    if job_id in app.analysis_results:
+                        app.analysis_results[job_id]['field_mappings'] = field_mappings
+                    if 'active_jobs' in locals() and job_id in active_jobs:
+                        active_jobs[job_id]['field_mappings'] = field_mappings
+
+                    logger.info(f"Stored field mappings for job ID: {job_id}")
+                except Exception as e:
+                    logger.error(f"Error generating field mappings: {str(e)}")
+                    field_mappings = {}
+
                 # Return analysis with success flag and maintain compatibility with both test formats
                 # Create the response with all keys needed for both tests
                 analysis = {
@@ -814,7 +1078,8 @@ def analyze_file():
                     # Add these keys directly to the response for compatibility with test_analyze_file
                     'structure': structure_info,
                     'sample_data': sample_data,
-                    'columns': list(raw_data.columns)[:100] if hasattr(raw_data, 'columns') else []
+                    'columns': list(raw_data.columns)[:100] if hasattr(raw_data, 'columns') else [],
+                    'mappings': field_mappings  # Include the field mappings in the response
                 }
 
                 # Log the response structure for debugging
@@ -1021,18 +1286,47 @@ def get_mapping_data(job_id):
     """
     logger.info(f"Getting mapping data for job ID: {job_id}")
 
-    # Check if job ID exists
-    if job_id not in app.analysis_results:
+    # Log all available job IDs for debugging
+    logger.info(f"Available job IDs in app.analysis_results: {list(app.analysis_results.keys())}")
+
+    # Import active_jobs from web.routes if available
+    try:
+        from web.routes import active_jobs
+        logger.info(f"Available job IDs in active_jobs: {list(active_jobs.keys())}")
+    except ImportError:
+        logger.warning("Could not import active_jobs from web.routes")
+        active_jobs = {}
+
+    # Check if job ID exists in app.analysis_results
+    if job_id in app.analysis_results:
+        logger.info(f"Found job ID in app.analysis_results: {job_id}")
+        job_data = app.analysis_results[job_id]
+        file_path = job_data.get('file_path')
+
+        # Ensure job data is also in active_jobs for consistency
+        if job_id not in active_jobs:
+            logger.info(f"Copying job data from app.analysis_results to active_jobs: {job_id}")
+            active_jobs[job_id] = job_data.copy()
+    # Check if job ID exists in active_jobs
+    elif job_id in active_jobs:
+        logger.info(f"Found job ID in active_jobs: {job_id}")
+        job_data = active_jobs[job_id]
+        file_path = job_data.get('file_path')
+
+        # Ensure job data is also in app.analysis_results for consistency
+        if job_id not in app.analysis_results:
+            logger.info(f"Copying job data from active_jobs to app.analysis_results: {job_id}")
+            app.analysis_results[job_id] = job_data.copy()
+    else:
         logger.warning(f"Invalid job ID: {job_id}")
+
+        # Return a clear error message instead of trying to use a different job ID
+        # This ensures the frontend gets a proper error response
         return jsonify({
             'success': False,
             'error': 'Invalid job ID',
             'details': f'Job ID {job_id} not found'
         }), 404
-
-    # Get job data
-    job_data = app.analysis_results[job_id]
-    file_path = job_data.get('file_path')
 
     # Check if file exists
     if not file_path or not os.path.exists(file_path):
@@ -1057,7 +1351,16 @@ def get_mapping_data(job_id):
             sample = data.head(5)
             for col in columns:
                 if col in sample:
-                    sample_data[col] = sample[col].tolist()
+                    # Convert to list and handle NaN values
+                    values = []
+                    for val in sample[col]:
+                        # Check if value is NaN and replace with null (None)
+                        import math
+                        if isinstance(val, float) and math.isnan(val):
+                            values.append(None)
+                        else:
+                            values.append(val)
+                    sample_data[col] = values
 
         # If sample data is empty, create dummy data
         if not sample_data or all(len(values) == 0 for values in sample_data.values()):
@@ -1104,11 +1407,111 @@ def get_mapping_data(job_id):
                     # Default dummy data for unknown columns
                     sample_data[col] = [f'Sample {i+1} for {col}' for i in range(5)]
 
-        # Return mapping data
+        # Get field mappings if available in job data
+        field_mappings = {}
+
+        # Check if job data has field_mappings
+        if job_id in app.analysis_results and 'field_mappings' in app.analysis_results[job_id]:
+            field_mappings = app.analysis_results[job_id]['field_mappings']
+            logger.info(f"Found field_mappings in app.analysis_results: {field_mappings}")
+        elif job_id in active_jobs and 'field_mappings' in active_jobs[job_id]:
+            field_mappings = active_jobs[job_id]['field_mappings']
+            logger.info(f"Found field_mappings in active_jobs: {field_mappings}")
+
+        # Check if job data has mappings in a different format
+        if job_id in app.analysis_results and 'mappings' in app.analysis_results[job_id]:
+            mappings_data = app.analysis_results[job_id]['mappings']
+            logger.info(f"Found mappings in app.analysis_results: {mappings_data}")
+            if isinstance(mappings_data, dict):
+                # If mappings is already a dict, convert it to the format expected by the frontend
+                for target_field, mapping_info in mappings_data.items():
+                    if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                        # Convert from complex format (with column, confidence, reasoning) to simple format (just column name)
+                        field_mappings[target_field] = mapping_info['column']
+                    else:
+                        # If it's already in the simple format, use it directly
+                        field_mappings[target_field] = mapping_info
+            elif isinstance(mappings_data, list):
+                # Convert from list format to dict format
+                for mapping in mappings_data:
+                    if 'target_field' in mapping and 'source_field' in mapping:
+                        field_mappings[mapping['target_field']] = mapping['source_field']
+        elif job_id in active_jobs and 'mappings' in active_jobs[job_id]:
+            mappings_data = active_jobs[job_id]['mappings']
+            logger.info(f"Found mappings in active_jobs: {mappings_data}")
+            if isinstance(mappings_data, dict):
+                # If mappings is already a dict, convert it to the format expected by the frontend
+                for target_field, mapping_info in mappings_data.items():
+                    if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                        # Convert from complex format (with column, confidence, reasoning) to simple format (just column name)
+                        field_mappings[target_field] = mapping_info['column']
+                    else:
+                        # If it's already in the simple format, use it directly
+                        field_mappings[target_field] = mapping_info
+            elif isinstance(mappings_data, list):
+                # Convert from list format to dict format
+                for mapping in mappings_data:
+                    if 'target_field' in mapping and 'source_field' in mapping:
+                        field_mappings[mapping['target_field']] = mapping['source_field']
+
+        # If no field mappings are available, try to generate them
+        if not field_mappings:
+            try:
+                # Create field mapper
+                from services.mapping.field_mapper import FieldMapper
+                field_mapper = FieldMapper()
+
+                # Generate field mappings
+                structure_info = {}
+                if job_id in app.analysis_results and 'structure_info' in app.analysis_results[job_id]:
+                    structure_info = app.analysis_results[job_id]['structure_info']
+                elif job_id in active_jobs and 'structure_info' in active_jobs[job_id]:
+                    structure_info = active_jobs[job_id]['structure_info']
+
+                # Use direct mapping based on column names
+                field_mappings = field_mapper.map_columns_by_name(columns)
+                logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
+
+                # If we have structure_info with field_mappings, use those instead
+                if structure_info and 'field_mappings' in structure_info and structure_info['field_mappings']:
+                    logger.info(f"Using field_mappings from structure_info")
+                    # Convert from the structure_info format to the format expected by the frontend
+                    for target_field, mapping_info in structure_info['field_mappings'].items():
+                        if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                            field_mappings[target_field] = mapping_info['column']
+
+                # If we have mappings in the job data, use those
+                if job_id in app.analysis_results and 'mappings' in app.analysis_results[job_id]:
+                    logger.info(f"Using mappings from app.analysis_results")
+                    mappings_data = app.analysis_results[job_id]['mappings']
+                    if isinstance(mappings_data, dict):
+                        for target_field, mapping_info in mappings_data.items():
+                            if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                                # Convert from complex format (with column, confidence, reasoning) to simple format (just column name)
+                                field_mappings[target_field] = mapping_info['column']
+                            else:
+                                # If it's already in the simple format, use it directly
+                                field_mappings[target_field] = mapping_info
+
+                logger.info(f"Generated {len(field_mappings)} field mappings")
+
+                # Store the generated mappings in job data
+                if job_id in app.analysis_results:
+                    app.analysis_results[job_id]['field_mappings'] = field_mappings
+                if job_id in active_jobs:
+                    active_jobs[job_id]['field_mappings'] = field_mappings
+
+                logger.info(f"Generated field mappings for job ID: {job_id}, {len(field_mappings)} mappings")
+            except Exception as e:
+                logger.error(f"Error generating field mappings: {str(e)}")
+                # Continue without field mappings if generation fails
+
+        # Return mapping data with field mappings
         return jsonify({
             'success': True,
             'columns': columns,
-            'sample_data': sample_data
+            'sample_data': sample_data,
+            'mappings': field_mappings
         })
 
     except Exception as e:

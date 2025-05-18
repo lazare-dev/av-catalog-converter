@@ -216,8 +216,99 @@ def analyze_file():
         job['status'] = 'analyzed'
         job['progress'] = 30
 
+        # Store job data in app.analysis_results for compatibility with get-mapping-data endpoint
+        try:
+            import sys
+            # Get the app instance from the main module
+            if 'app' in sys.modules:
+                app = sys.modules['app']
+                if hasattr(app, 'analysis_results'):
+                    # Make sure job has all required fields
+                    job_data = {
+                        'job_id': job_id,
+                        'filename': job.get('filename'),
+                        'file_path': file_path,
+                        'upload_time': job.get('created_at'),
+                        'status': 'analyzed',
+                        'structure_info': structure_info,
+                        'row_count': job.get('row_count', 0),
+                        'sample_data': job.get('sample_data', {})
+                    }
+
+                    # Store in app.analysis_results
+                    app.analysis_results[job_id] = job_data
+                    logger.info(f"Stored job ID in app.analysis_results: {job_id}")
+
+                    # Make sure active_jobs has the same data
+                    if job_id in active_jobs:
+                        # Update existing job with any missing fields
+                        for key, value in job_data.items():
+                            if key not in active_jobs[job_id]:
+                                active_jobs[job_id][key] = value
+                        logger.info(f"Updated job ID in active_jobs: {job_id}")
+                    else:
+                        # Create new job in active_jobs
+                        active_jobs[job_id] = job_data
+                        logger.info(f"Created job ID in active_jobs: {job_id}")
+                else:
+                    logger.warning("app.analysis_results not found")
+            else:
+                logger.warning("app module not found")
+        except Exception as e:
+            logger.error(f"Error storing job in app.analysis_results: {str(e)}")
+
         # Extract potential field mappings
         field_mappings = structure_info.get('possible_field_mappings', {})
+
+        # If no field mappings are available, try to generate them
+        if not field_mappings:
+            try:
+                # Create field mapper
+                from services.mapping.field_mapper import FieldMapper
+                field_mapper = FieldMapper()
+
+                # Get column names from the data
+                columns = list(data.columns)
+
+                # Generate field mappings
+                # First try to get mapping suggestions
+                try:
+                    mapping_suggestions = field_mapper.get_mapping_suggestions(columns, structure_info)
+
+                    # Convert from the API format to the format expected by the frontend
+                    field_mappings = {}
+                    if 'mappings' in mapping_suggestions and isinstance(mapping_suggestions['mappings'], list):
+                        # Convert from list of mappings to dictionary format
+                        for mapping in mapping_suggestions['mappings']:
+                            if 'target_field' in mapping and 'source_field' in mapping:
+                                field_mappings[mapping['target_field']] = mapping['source_field']
+                        logger.info(f"Generated {len(field_mappings)} field mappings from suggestions")
+                    else:
+                        # Fallback to direct mapping
+                        field_mappings = field_mapper.map_columns_by_name(columns)
+                        logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
+                except Exception as e:
+                    logger.warning(f"Error generating mapping suggestions: {str(e)}, falling back to direct mapping")
+                    # Fallback to direct mapping
+                    field_mappings = field_mapper.map_columns_by_name(columns)
+                    logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
+
+                # Store field mappings in job data
+                job['field_mappings'] = field_mappings
+
+                # Also store in app.analysis_results if available
+                try:
+                    import sys
+                    if 'app' in sys.modules:
+                        app = sys.modules['app']
+                        if hasattr(app, 'analysis_results') and job_id in app.analysis_results:
+                            app.analysis_results[job_id]['field_mappings'] = field_mappings
+                            logger.info(f"Stored field mappings in app.analysis_results for job ID: {job_id}")
+                except Exception as e:
+                    logger.error(f"Error storing field mappings in app.analysis_results: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error generating field mappings: {str(e)}")
+                # Continue without field mappings if generation fails
 
         # Update job with row count if available
         if 'row_count' not in job and 'row_count' in structure_info:
@@ -227,11 +318,32 @@ def analyze_file():
         if 'effective_rows' in structure_info:
             job['row_count'] = structure_info['effective_rows']
 
+        # Get column names for the response
+        columns = list(data.columns)
+
+        # Get sample data for the response
+        sample_data = {}
+        if hasattr(data, 'head'):
+            sample = data.head(5)
+            for col in columns:
+                if col in sample:
+                    # Convert to list and handle NaN values
+                    values = []
+                    for val in sample[col]:
+                        # Check if value is NaN and replace with null (None)
+                        import math
+                        if isinstance(val, float) and math.isnan(val):
+                            values.append(None)
+                        else:
+                            values.append(val)
+                    sample_data[col] = values
+
         return jsonify({
             'success': True,
             'message': 'File analyzed successfully',
             'job_id': job_id,  # Include job_id in the response
             'field_mappings': field_mappings,
+            'mappings': field_mappings,  # Include mappings in the format expected by the frontend
             'column_info': structure_info.get('column_analysis', {}),
             'data_quality': structure_info.get('data_quality_issues', []),
             'structure': {
@@ -239,7 +351,9 @@ def analyze_file():
                 'column_count': structure_info.get('column_count', 0),
                 'effective_rows': structure_info.get('effective_rows', 0),
                 'data_rows': structure_info.get('data_rows', 0)
-            }
+            },
+            'columns': columns,  # Include columns in the response
+            'sample_data': sample_data  # Include sample data in the response
         })
 
     except Exception as e:
@@ -527,6 +641,141 @@ def preview_data(job_id):
     except Exception as e:
         logger.error(f"Error generating preview: {str(e)}")
         return jsonify({'error': f'Preview failed: {str(e)}'}), 500
+
+@api_bp.route('/validate-mapping', methods=['POST', 'OPTIONS'])
+def validate_mapping():
+    """
+    Validate field mappings
+
+    Returns:
+        JSON response with validation results
+    """
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({'success': True})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        return response
+
+    # Check if request is JSON
+    if not request.is_json:
+        logger.warning("Non-JSON request to validate-mapping endpoint")
+        return jsonify({
+            'success': False,
+            'error': 'Invalid content type',
+            'details': 'Request must be application/json'
+        }), 415
+
+    # Get request data
+    data = request.json
+
+    # Check required fields
+    if 'job_id' not in data:
+        logger.warning("Missing job_id in validate-mapping request")
+        return jsonify({
+            'success': False,
+            'error': 'Missing job_id',
+            'details': 'The job_id field is required'
+        }), 400
+
+    if 'mappings' not in data:
+        logger.warning("Missing mappings in validate-mapping request")
+        return jsonify({
+            'success': False,
+            'error': 'Missing mappings',
+            'details': 'The mappings field is required'
+        }), 400
+
+    job_id = data['job_id']
+    mappings = data['mappings']
+
+    # Log the request data for debugging
+    logger.info(f"Validate mapping request received for job ID: {job_id}")
+    logger.info(f"Mappings: {mappings}")
+
+    # Check if job exists
+    if job_id not in active_jobs:
+        logger.warning(f"Invalid job ID in validate-mapping request: {job_id}")
+
+        # Check if job exists in app.analysis_results
+        try:
+            import sys
+            if 'app' in sys.modules:
+                app = sys.modules['app']
+                if hasattr(app, 'analysis_results') and job_id in app.analysis_results:
+                    # Copy job data from app.analysis_results to active_jobs
+                    active_jobs[job_id] = app.analysis_results[job_id].copy()
+                    logger.info(f"Copied job data from app.analysis_results to active_jobs: {job_id}")
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Invalid job ID',
+                        'details': f'Job ID {job_id} not found in app.analysis_results'
+                    }), 404
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid job ID',
+                    'details': f'Job ID {job_id} not found and app module not available'
+                }), 404
+        except Exception as e:
+            logger.error(f"Error checking app.analysis_results: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid job ID',
+                'details': f'Job ID {job_id} not found: {str(e)}'
+            }), 404
+
+    # Validate mappings
+    from utils.helpers.validation_helpers import validate_mapping as validate_mapping_helper
+    from config.schema import REQUIRED_FIELDS
+
+    logger.info(f"Validating mappings for job {job_id}: {mappings}")
+
+    # Validate the mappings
+    issues = validate_mapping_helper(mappings)
+
+    # Check if there are any issues
+    has_issues = any(len(issues[key]) > 0 for key in issues)
+
+    # Log validation results
+    if has_issues:
+        logger.warning(f"Validation issues found in field mapping")
+        for issue_type, issue_list in issues.items():
+            if issue_list:
+                logger.warning(f"{issue_type}: {', '.join(issue_list)}")
+    else:
+        logger.info(f"Field mapping validation successful")
+
+    # Store validated mappings in job data
+    if not has_issues:
+        active_jobs[job_id]['validated_mappings'] = mappings
+        active_jobs[job_id]['status'] = 'validated'
+
+        # Also store in app.analysis_results if available
+        try:
+            import sys
+            if 'app' in sys.modules:
+                app = sys.modules['app']
+                if hasattr(app, 'analysis_results') and job_id in app.analysis_results:
+                    app.analysis_results[job_id]['validated_mappings'] = mappings
+                    app.analysis_results[job_id]['status'] = 'validated'
+                    logger.info(f"Stored validated mappings in app.analysis_results for job ID: {job_id}")
+        except Exception as e:
+            logger.error(f"Error storing validated mappings in app.analysis_results: {str(e)}")
+
+    # Return validation results
+    response = jsonify({
+        'success': not has_issues,
+        'issues': issues,
+        'job_id': job_id
+    })
+
+    # Add CORS headers
+    response.headers.add('Access-Control-Allow-Origin', '*')
+
+    return response
 
 @api_bp.route('/cleanup/<job_id>', methods=['DELETE'])
 def cleanup_job(job_id):

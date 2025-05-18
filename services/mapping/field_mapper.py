@@ -660,6 +660,56 @@ class FieldMapper:
 
         return result
 
+    def map_columns_by_name(self, columns: List[str]) -> Dict[str, str]:
+        """
+        Map columns to standard fields based on column names
+
+        Args:
+            columns (List[str]): List of column names
+
+        Returns:
+            Dict[str, str]: Mapping from standard field to source column
+        """
+        logger.info(f"Mapping {len(columns)} columns by name")
+
+        # Use the direct mapper for simple name-based mapping
+        direct_mappings = self.direct_mapper.map_fields(columns)
+
+        # Invert the mapping to get standard field -> source column
+        inverted_mappings = {}
+        for source, target in direct_mappings.items():
+            inverted_mappings[target] = source
+
+        logger.info(f"Mapped {len(inverted_mappings)} fields by name")
+        return inverted_mappings
+
+    def get_mapping_suggestions(self, columns: List[str], structure_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Get mapping suggestions for columns
+
+        Args:
+            columns (List[str]): List of column names
+            structure_info (Dict[str, Any], optional): Structure analysis results
+
+        Returns:
+            Dict[str, Any]: Mapping suggestions with mappings in list format
+        """
+        logger.info(f"Getting mapping suggestions for {len(columns)} columns")
+
+        # Create empty sample rows for the map_fields method
+        sample_rows = []
+
+        # Use the map_fields method to get mapping suggestions
+        mapping_result = self.map_fields(columns, sample_rows)
+
+        # Ensure we have a mappings list
+        if 'mappings' not in mapping_result:
+            logger.warning("No mappings found in mapping result")
+            mapping_result['mappings'] = []
+
+        logger.info(f"Generated {len(mapping_result.get('mappings', []))} mapping suggestions")
+        return mapping_result
+
     def _apply_mappings_dict(self, data: pd.DataFrame, mapping_dict: Dict[str, str]) -> pd.DataFrame:
         """
         Apply field mappings from a dictionary

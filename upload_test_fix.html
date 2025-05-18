@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Upload Test - AV Catalog Converter</title>
+    <title>Upload Test Fix - AV Catalog Converter</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -53,16 +53,17 @@
         }
         .loading {
             display: none;
-            margin-top: 10px;
+            text-align: center;
+            margin: 20px 0;
         }
         .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
             border-radius: 50%;
-            border-left-color: #3498db;
-            animation: spin 1s linear infinite;
-            margin: 10px auto;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 10px;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -71,8 +72,8 @@
     </style>
 </head>
 <body>
-    <h1>Upload Catalog File</h1>
-    <p>Upload your audio-visual equipment catalog file to convert it to a standardized format.</p>
+    <h1>Upload Test Fix</h1>
+    <p>This is a simple test page to verify file upload functionality.</p>
 
     <form id="upload-form" enctype="multipart/form-data">
         <div class="form-group">
@@ -87,16 +88,7 @@
         </div>
 
         <div class="form-group">
-            <label for="format">Output Format:</label>
-            <select id="format" name="format">
-                <option value="csv">CSV</option>
-                <option value="excel">Excel</option>
-                <option value="json">JSON</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <button type="submit" id="submit-btn">Upload and Analyze</button>
+            <button type="submit" id="submit-btn">Upload File</button>
         </div>
     </form>
 
@@ -112,7 +104,6 @@
             e.preventDefault();
 
             const fileInput = document.getElementById('file');
-            const formatSelect = document.getElementById('format');
             const companyInput = document.getElementById('company');
             const resultDiv = document.getElementById('result');
             const loadingDiv = document.getElementById('loading');
@@ -127,8 +118,7 @@
             // Create FormData object
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            formData.append('format', formatSelect.value);
-
+            
             if (companyInput.value) {
                 formData.append('company', companyInput.value);
             }
@@ -138,31 +128,41 @@
             resultDiv.innerHTML = '';
             submitBtn.disabled = true;
 
-            // Direct upload and analyze in one step
-            fetch('/api/analyze', {
+            // Upload the file
+            fetch('/api/upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Upload failed');
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 loadingDiv.style.display = 'none';
                 submitBtn.disabled = false;
 
                 if (data.success) {
-                    // Analysis successful
+                    // Upload successful
                     resultDiv.innerHTML = `
                         <div class="success">
-                            <p>File analyzed successfully!</p>
+                            <p>File uploaded successfully!</p>
                             <p>Job ID: ${data.job_id}</p>
-                            <p>File: ${data.file_info ? data.file_info.filename : 'Unknown'}</p>
-                            <p>Rows: ${data.structure ? data.structure.row_count : 'Unknown'}</p>
-                            <p>Columns: ${data.structure ? data.structure.column_count : 'Unknown'}</p>
-                            <p><a href="/api/get-mapping-data/${data.job_id}" target="_blank">View Mapping Data</a></p>
+                            <p>File: ${data.filename}</p>
+                            <p><button id="analyze-btn" data-job-id="${data.job_id}">Analyze File</button></p>
                         </div>
                     `;
+
+                    // Add event listener to analyze button
+                    document.getElementById('analyze-btn').addEventListener('click', function() {
+                        analyzeFile(this.getAttribute('data-job-id'));
+                    });
                 } else {
-                    // Analysis failed
-                    resultDiv.innerHTML = `<div class="error">Analysis failed: ${data.error || 'Unknown error'}</div>`;
+                    // Upload failed
+                    resultDiv.innerHTML = `<div class="error">Upload failed: ${data.error || 'Unknown error'}</div>`;
                 }
             })
             .catch(error => {
@@ -172,6 +172,56 @@
                 console.error('Error:', error);
             });
         });
+
+        function analyzeFile(jobId) {
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+
+            // Show loading indicator
+            loadingDiv.style.display = 'block';
+            
+            // Create FormData object
+            const formData = new FormData();
+            formData.append('job_id', jobId);
+
+            // Analyze the file
+            fetch('/api/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Analysis failed');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadingDiv.style.display = 'none';
+
+                if (data.success) {
+                    // Analysis successful
+                    resultDiv.innerHTML += `
+                        <div class="success">
+                            <p>File analyzed successfully!</p>
+                            <p>Job ID: ${data.job_id}</p>
+                            <p>Rows: ${data.structure ? data.structure.row_count : 'Unknown'}</p>
+                            <p>Columns: ${data.structure ? data.structure.column_count : 'Unknown'}</p>
+                            <p><a href="/api/get-mapping-data/${data.job_id}" target="_blank">View Mapping Data</a></p>
+                        </div>
+                    `;
+                } else {
+                    // Analysis failed
+                    resultDiv.innerHTML += `<div class="error">Analysis failed: ${data.error || 'Unknown error'}</div>`;
+                }
+            })
+            .catch(error => {
+                loadingDiv.style.display = 'none';
+                resultDiv.innerHTML += `<div class="error">Error: ${error.message}</div>`;
+                console.error('Error:', error);
+            });
+        }
     </script>
 </body>
 </html>
