@@ -556,6 +556,9 @@ def validate_mapping():
         except Exception as e:
             logger.error(f"Error storing validated mappings in active_jobs: {str(e)}")
 
+    # Log the validation results
+    logger.info(f"Validation results for job {job_id}: success={not has_issues}, issues={issues}")
+
     # Return validation results
     response = jsonify({
         'success': not has_issues,
@@ -565,6 +568,8 @@ def validate_mapping():
 
     # Add CORS headers
     response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
 
     return response
 
@@ -1041,8 +1046,17 @@ def analyze_file():
                     # Store the field mappings in the job data
                     if job_id in app.analysis_results:
                         app.analysis_results[job_id]['field_mappings'] = field_mappings
+                        # Also store in analyze_response for consistency
+                        if 'analyze_response' not in app.analysis_results[job_id]:
+                            app.analysis_results[job_id]['analyze_response'] = {}
+                        app.analysis_results[job_id]['analyze_response']['field_mappings'] = field_mappings
+
                     if 'active_jobs' in locals() and job_id in active_jobs:
                         active_jobs[job_id]['field_mappings'] = field_mappings
+                        # Also store in analyze_response for consistency
+                        if 'analyze_response' not in active_jobs[job_id]:
+                            active_jobs[job_id]['analyze_response'] = {}
+                        active_jobs[job_id]['analyze_response']['field_mappings'] = field_mappings
 
                     logger.info(f"Stored field mappings for job ID: {job_id}")
                 except Exception as e:
@@ -1079,7 +1093,8 @@ def analyze_file():
                     'structure': structure_info,
                     'sample_data': sample_data,
                     'columns': list(raw_data.columns)[:100] if hasattr(raw_data, 'columns') else [],
-                    'mappings': field_mappings  # Include the field mappings in the response
+                    'mappings': field_mappings,  # Include the field mappings in the response
+                    'field_mappings': field_mappings  # Also include as field_mappings for consistency
                 }
 
                 # Log the response structure for debugging
@@ -1185,6 +1200,32 @@ def analyze_file():
                 # Make sure job_id is included in the response
                 if 'job_id' not in analysis:
                     analysis['job_id'] = job_id
+
+                # Store the analysis result in the job data
+                if job_id in app.analysis_results:
+                    # Store field_mappings in multiple locations for redundancy
+                    app.analysis_results[job_id]['field_mappings'] = field_mappings
+                    app.analysis_results[job_id]['mappings'] = field_mappings
+
+                    # Store the full analysis response
+                    app.analysis_results[job_id]['analyze_response'] = analysis
+
+                    # Also store in analysis field for compatibility
+                    if 'analysis' not in app.analysis_results[job_id]:
+                        app.analysis_results[job_id]['analysis'] = {}
+                    app.analysis_results[job_id]['analysis']['field_mappings'] = field_mappings
+
+                # Do the same for active_jobs
+                if 'active_jobs' in locals() and job_id in active_jobs:
+                    active_jobs[job_id]['field_mappings'] = field_mappings
+                    active_jobs[job_id]['mappings'] = field_mappings
+                    active_jobs[job_id]['analyze_response'] = analysis
+
+                    if 'analysis' not in active_jobs[job_id]:
+                        active_jobs[job_id]['analysis'] = {}
+                    active_jobs[job_id]['analysis']['field_mappings'] = field_mappings
+
+                logger.info(f"Stored analysis result with field mappings for job ID: {job_id}")
 
                 # Create a copy of the response before returning
                 response = jsonify(analysis)
@@ -1461,24 +1502,120 @@ def get_mapping_data(job_id):
                 from services.mapping.field_mapper import FieldMapper
                 field_mapper = FieldMapper()
 
-                # Generate field mappings
+                # Get structure info from job data
                 structure_info = {}
                 if job_id in app.analysis_results and 'structure_info' in app.analysis_results[job_id]:
                     structure_info = app.analysis_results[job_id]['structure_info']
                 elif job_id in active_jobs and 'structure_info' in active_jobs[job_id]:
                     structure_info = active_jobs[job_id]['structure_info']
 
-                # Use direct mapping based on column names
-                field_mappings = field_mapper.map_columns_by_name(columns)
-                logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
-
-                # If we have structure_info with field_mappings, use those instead
-                if structure_info and 'field_mappings' in structure_info and structure_info['field_mappings']:
-                    logger.info(f"Using field_mappings from structure_info")
-                    # Convert from the structure_info format to the format expected by the frontend
-                    for target_field, mapping_info in structure_info['field_mappings'].items():
+                # First check if we have field_mappings in the analyze response (highest priority)
+                if job_id in app.analysis_results and 'analyze_response' in app.analysis_results[job_id] and 'field_mappings' in app.analysis_results[job_id]['analyze_response']:
+                    logger.info(f"Using field_mappings from analyze_response in app.analysis_results")
+                    analyze_mappings = app.analysis_results[job_id]['analyze_response']['field_mappings']
+                    # Convert from the analyze response format to the format expected by the frontend
+                    for target_field, mapping_info in analyze_mappings.items():
                         if isinstance(mapping_info, dict) and 'column' in mapping_info:
                             field_mappings[target_field] = mapping_info['column']
+                        elif isinstance(mapping_info, str):
+                            field_mappings[target_field] = mapping_info
+                    logger.info(f"Updated with {len(analyze_mappings)} mappings from analyze_response")
+
+                # Then check active_jobs for analyze_response
+                elif job_id in active_jobs and 'analyze_response' in active_jobs[job_id] and 'field_mappings' in active_jobs[job_id]['analyze_response']:
+                    logger.info(f"Using field_mappings from analyze_response in active_jobs")
+                    analyze_mappings = active_jobs[job_id]['analyze_response']['field_mappings']
+                    # Convert from the analyze response format to the format expected by the frontend
+                    for target_field, mapping_info in analyze_mappings.items():
+                        if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                            field_mappings[target_field] = mapping_info['column']
+                        elif isinstance(mapping_info, str):
+                            field_mappings[target_field] = mapping_info
+                    logger.info(f"Updated with {len(analyze_mappings)} mappings from analyze_response")
+
+                # Check for field_mappings directly in job data (highest priority)
+                logger.info(f"Checking for field_mappings in app.analysis_results[{job_id}]")
+                logger.info(f"app.analysis_results keys: {list(app.analysis_results.keys())}")
+
+                if job_id in app.analysis_results:
+                    logger.info(f"Job ID {job_id} found in app.analysis_results")
+                    logger.info(f"app.analysis_results[{job_id}] keys: {list(app.analysis_results[job_id].keys())}")
+
+                    if 'field_mappings' in app.analysis_results[job_id]:
+                        logger.info(f"field_mappings found in app.analysis_results[{job_id}]")
+                        logger.info(f"field_mappings: {app.analysis_results[job_id]['field_mappings']}")
+                        field_mappings.update(app.analysis_results[job_id]['field_mappings'])
+                        logger.info(f"Updated with {len(app.analysis_results[job_id]['field_mappings'])} mappings from app.analysis_results")
+                    else:
+                        logger.info(f"field_mappings NOT found in app.analysis_results[{job_id}]")
+
+                # Check for field_mappings in active_jobs
+                if job_id not in app.analysis_results and job_id in active_jobs and 'field_mappings' in active_jobs[job_id]:
+                    logger.info(f"Using field_mappings from active_jobs")
+                    field_mappings.update(active_jobs[job_id]['field_mappings'])
+                    logger.info(f"Updated with {len(active_jobs[job_id]['field_mappings'])} mappings from active_jobs")
+
+                # Check for possible_field_mappings in structure_info
+                elif structure_info and 'possible_field_mappings' in structure_info and structure_info['possible_field_mappings']:
+                    logger.info(f"Using possible_field_mappings from structure_info")
+                    # Convert from the structure_info format to the format expected by the frontend
+                    for target_field, mapping_info in structure_info['possible_field_mappings'].items():
+                        if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                            field_mappings[target_field] = mapping_info['column']
+                        elif isinstance(mapping_info, str):
+                            field_mappings[target_field] = mapping_info
+                    logger.info(f"Extracted {len(field_mappings)} mappings from structure_info")
+
+                # Check for field_mappings in the analysis result
+                elif job_id in active_jobs and 'analysis' in active_jobs[job_id] and 'field_mappings' in active_jobs[job_id]['analysis']:
+                    logger.info(f"Using field_mappings from analysis result")
+                    analysis_mappings = active_jobs[job_id]['analysis']['field_mappings']
+                    # Convert from the analysis format to the format expected by the frontend
+                    for target_field, mapping_info in analysis_mappings.items():
+                        if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                            field_mappings[target_field] = mapping_info['column']
+                        elif isinstance(mapping_info, str):
+                            field_mappings[target_field] = mapping_info
+                    logger.info(f"Updated with {len(analysis_mappings)} mappings from analysis result")
+
+                # Check for field_mappings in the analyze response
+                elif job_id in active_jobs and 'analyze_response' in active_jobs[job_id] and 'field_mappings' in active_jobs[job_id]['analyze_response']:
+                    logger.info(f"Using field_mappings from analyze_response")
+                    analyze_mappings = active_jobs[job_id]['analyze_response']['field_mappings']
+                    # Convert from the analyze response format to the format expected by the frontend
+                    for target_field, mapping_info in analyze_mappings.items():
+                        if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                            field_mappings[target_field] = mapping_info['column']
+                        elif isinstance(mapping_info, str):
+                            field_mappings[target_field] = mapping_info
+                    logger.info(f"Updated with {len(analyze_mappings)} mappings from analyze_response")
+
+                # If still no mappings, try to generate them using get_mapping_suggestions
+                elif not field_mappings:
+                    try:
+                        logger.info(f"Generating mapping suggestions using get_mapping_suggestions")
+                        mapping_suggestions = field_mapper.get_mapping_suggestions(columns, structure_info)
+
+                        # Convert from the API format to the format expected by the frontend
+                        if 'mappings' in mapping_suggestions and isinstance(mapping_suggestions['mappings'], list):
+                            # Convert from list of mappings to dictionary format
+                            for mapping in mapping_suggestions['mappings']:
+                                if 'target_field' in mapping and 'source_field' in mapping:
+                                    field_mappings[mapping['target_field']] = mapping['source_field']
+                            logger.info(f"Generated {len(field_mappings)} field mappings from suggestions")
+                        else:
+                            # Fallback to direct mapping
+                            field_mappings = field_mapper.map_columns_by_name(columns)
+                            logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
+                    except Exception as e:
+                        logger.warning(f"Error generating mapping suggestions: {str(e)}, falling back to direct mapping")
+                        # Fallback to direct mapping
+                        field_mappings = field_mapper.map_columns_by_name(columns)
+                        logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
+                else:
+                    # Use direct mapping based on column names
+                    field_mappings = field_mapper.map_columns_by_name(columns)
+                    logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
 
                 # If we have mappings in the job data, use those
                 if job_id in app.analysis_results and 'mappings' in app.analysis_results[job_id]:
@@ -1506,13 +1643,74 @@ def get_mapping_data(job_id):
                 logger.error(f"Error generating field mappings: {str(e)}")
                 # Continue without field mappings if generation fails
 
-        # Return mapping data with field mappings
-        return jsonify({
+        # Log the mapping data being returned
+        logger.info(f"Returning mapping data for job ID: {job_id}")
+        logger.info(f"Columns: {len(columns)} columns")
+        logger.info(f"Sample data: {len(sample_data)} columns with samples")
+        logger.info(f"Field mappings: {field_mappings}")
+
+        # Log detailed information about where field mappings were found
+        if field_mappings:
+            logger.info(f"Successfully found {len(field_mappings)} field mappings")
+            for target_field, source_field in field_mappings.items():
+                logger.info(f"Mapping: {target_field} -> {source_field}")
+        else:
+            logger.warning(f"No field mappings found for job ID: {job_id}")
+            # Log all available locations where mappings might be stored
+            if job_id in app.analysis_results:
+                logger.info(f"Job data keys in app.analysis_results: {list(app.analysis_results[job_id].keys())}")
+                if 'analyze_response' in app.analysis_results[job_id]:
+                    logger.info(f"analyze_response keys: {list(app.analysis_results[job_id]['analyze_response'].keys())}")
+            if 'active_jobs' in locals() and job_id in active_jobs:
+                logger.info(f"Job data keys in active_jobs: {list(active_jobs[job_id].keys())}")
+                if 'analyze_response' in active_jobs[job_id]:
+                    logger.info(f"analyze_response keys: {list(active_jobs[job_id]['analyze_response'].keys())}")
+
+        # Log the final response structure
+        response_data = {
             'success': True,
             'columns': columns,
+            'source_columns': columns,
             'sample_data': sample_data,
-            'mappings': field_mappings
-        })
+            'mappings': field_mappings,
+            'required_fields': ["SKU", "Short Description", "Manufacturer"]
+        }
+        logger.info(f"Response structure: {list(response_data.keys())}")
+
+        # Get analyze_response if available
+        analyze_response = None
+        if job_id in app.analysis_results and 'analyze_response' in app.analysis_results[job_id]:
+            analyze_response = app.analysis_results[job_id]['analyze_response']
+            logger.info(f"Found analyze_response in app.analysis_results")
+        elif 'active_jobs' in locals() and job_id in active_jobs and 'analyze_response' in active_jobs[job_id]:
+            analyze_response = active_jobs[job_id]['analyze_response']
+            logger.info(f"Found analyze_response in active_jobs")
+
+        # Prepare response data
+        response_data = {
+            'success': True,
+            'columns': columns,
+            'source_columns': columns,  # Add source_columns for compatibility
+            'sample_data': sample_data,
+            'mappings': field_mappings,
+            'required_fields': ["SKU", "Short Description", "Manufacturer"]  # Add required fields
+        }
+
+        # Include analyze_response if available
+        if analyze_response:
+            logger.info(f"Including analyze_response in response")
+            response_data['analyze_response'] = analyze_response
+
+        # Include field_mappings directly if available
+        if job_id in app.analysis_results and 'field_mappings' in app.analysis_results[job_id]:
+            logger.info(f"Including field_mappings from app.analysis_results")
+            response_data['field_mappings'] = app.analysis_results[job_id]['field_mappings']
+        elif 'active_jobs' in locals() and job_id in active_jobs and 'field_mappings' in active_jobs[job_id]:
+            logger.info(f"Including field_mappings from active_jobs")
+            response_data['field_mappings'] = active_jobs[job_id]['field_mappings']
+
+        logger.info(f"Final response data keys: {list(response_data.keys())}")
+        return jsonify(response_data)
 
     except Exception as e:
         logger.error(f"Error getting mapping data: {str(e)}", exc_info=True)

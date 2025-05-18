@@ -125,7 +125,7 @@
             <h2>Review and Edit Field Mappings</h2>
             <p>The system has automatically mapped your catalog fields to our standard schema. Please review and adjust the mappings as needed.</p>
 
-            <form id="mapping-form" action="/api/validate-mapping" method="post">
+            <form id="mapping-form">
                 <input type="hidden" id="job-id" name="job_id" value="{{job_id}}">
 
                 <table class="mapping-table">
@@ -187,6 +187,9 @@
             // Store the original mappings
             originalMappings = data.mappings || {};
             sourceColumns = data.source_columns || [];
+
+            // Log the suggested mappings for debugging
+            console.log('Suggested mappings received from server:', originalMappings);
 
             // Process sample data to ensure it's valid
             if (!data.sample_data) {
@@ -330,6 +333,7 @@
                             option.textContent = column;
                             if (originalMappings[field] === column) {
                                 option.selected = true;
+                                console.log(`Setting selected option for field ${field} to column ${column}`);
                             }
                             select.appendChild(option);
                         });
@@ -531,7 +535,13 @@
                 }
             });
 
+            // Log the complete mappings object
+            console.log('Complete mappings object:', mappings);
+
             // Send to validation endpoint
+            console.log('Sending validation request with job_id:', document.getElementById('job-id').value);
+            console.log('Mappings being sent:', mappings);
+
             fetch('/api/validate-mapping', {
                 method: 'POST',
                 headers: {
@@ -542,13 +552,18 @@
                     mappings: mappings
                 }),
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Validation response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                // Log the validation response
+                console.log('Validation response data:', data);
                 // Display validation results
                 displayValidationResults(data);
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Error during validation:', error);
                 alert('An error occurred while validating the mappings.');
             });
         });
@@ -610,6 +625,9 @@
                     mappings[field] = select.value;
                 }
             });
+
+            // Log the complete mappings object for processing
+            console.log('Complete mappings object for processing:', mappings);
 
             // Send to process endpoint
             fetch(`/api/process/${jobId}`, {

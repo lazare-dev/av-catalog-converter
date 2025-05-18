@@ -271,30 +271,40 @@ def analyze_file():
                 columns = list(data.columns)
 
                 # Generate field mappings
-                # First try to get mapping suggestions
-                try:
-                    mapping_suggestions = field_mapper.get_mapping_suggestions(columns, structure_info)
-
-                    # Convert from the API format to the format expected by the frontend
+                # First check if structure_info has possible_field_mappings
+                if structure_info and 'possible_field_mappings' in structure_info and structure_info['possible_field_mappings']:
+                    logger.info(f"Using possible_field_mappings from structure_info")
+                    # Convert from the structure_info format to the format expected by the frontend
                     field_mappings = {}
-                    if 'mappings' in mapping_suggestions and isinstance(mapping_suggestions['mappings'], list):
-                        # Convert from list of mappings to dictionary format
-                        for mapping in mapping_suggestions['mappings']:
-                            if 'target_field' in mapping and 'source_field' in mapping:
-                                field_mappings[mapping['target_field']] = mapping['source_field']
-                        logger.info(f"Generated {len(field_mappings)} field mappings from suggestions")
-                    else:
-                        # Fallback to direct mapping
+                    for target_field, mapping_info in structure_info['possible_field_mappings'].items():
+                        if isinstance(mapping_info, dict) and 'column' in mapping_info:
+                            field_mappings[target_field] = mapping_info['column']
+                        elif isinstance(mapping_info, str):
+                            field_mappings[target_field] = mapping_info
+                    logger.info(f"Extracted {len(field_mappings)} mappings from structure_info")
+                else:
+                    # Fallback to direct mapping
+                    try:
                         field_mappings = field_mapper.map_columns_by_name(columns)
                         logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
-                except Exception as e:
-                    logger.warning(f"Error generating mapping suggestions: {str(e)}, falling back to direct mapping")
-                    # Fallback to direct mapping
-                    field_mappings = field_mapper.map_columns_by_name(columns)
-                    logger.info(f"Generated {len(field_mappings)} field mappings using direct mapping")
+                    except Exception as e:
+                        logger.warning(f"Error generating field mappings: {str(e)}, using empty mappings")
+                        field_mappings = {}
 
                 # Store field mappings in job data
                 job['field_mappings'] = field_mappings
+
+                # Also store the analysis result in the job data
+                if 'structure' in job and 'possible_field_mappings' in job['structure']:
+                    logger.info(f"Storing possible_field_mappings from structure in job data")
+                    job['analysis'] = {'field_mappings': job['structure']['possible_field_mappings']}
+                    logger.info(f"Stored {len(job['structure']['possible_field_mappings'])} mappings from structure")
+
+                # Store the analyze response field_mappings in the job data
+                if 'field_mappings' in locals() and field_mappings:
+                    logger.info(f"Storing field_mappings in analyze_response")
+                    job['analyze_response'] = {'field_mappings': field_mappings}
+                    logger.info(f"Stored {len(field_mappings)} mappings in analyze_response")
 
                 # Also store in app.analysis_results if available
                 try:
@@ -658,37 +668,76 @@ def validate_mapping():
         response.headers.add('Access-Control-Allow-Methods', 'POST')
         return response
 
+    # Log the request details for debugging
+    logger.info(f"Validate mapping request received")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Request headers: {dict(request.headers)}")
+    logger.info(f"Request content type: {request.content_type}")
+    logger.info(f"Request is JSON: {request.is_json}")
+
     # Check if request is JSON
     if not request.is_json:
         logger.warning("Non-JSON request to validate-mapping endpoint")
-        return jsonify({
-            'success': False,
-            'error': 'Invalid content type',
-            'details': 'Request must be application/json'
-        }), 415
+        # Try to parse the request data anyway
+        try:
+            if request.form:
+                logger.info(f"Form data received: {dict(request.form)}")
+                job_id = request.form.get('job_id')
+                # Try to parse mappings from form data
+                mappings = {}
+                for key, value in request.form.items():
+                    if key.startswith('mapping[') and key.endswith(']'):
+                        field = key[8:-1]  # Extract field name from mapping[field]
+                        mappings[field] = value
 
-    # Get request data
-    data = request.json
+                logger.info(f"Extracted mappings from form data: {mappings}")
 
-    # Check required fields
-    if 'job_id' not in data:
-        logger.warning("Missing job_id in validate-mapping request")
-        return jsonify({
-            'success': False,
-            'error': 'Missing job_id',
-            'details': 'The job_id field is required'
-        }), 400
+                if job_id and mappings:
+                    # Continue with validation using extracted data
+                    pass
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Invalid content type',
+                        'details': 'Request must be application/json or contain valid form data'
+                    }), 415
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid content type',
+                    'details': 'Request must be application/json'
+                }), 415
+        except Exception as e:
+            logger.error(f"Error parsing non-JSON request: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid content type',
+                'details': f'Request must be application/json: {str(e)}'
+            }), 415
+    else:
+        # Get request data from JSON
+        data = request.json
+        logger.info(f"JSON data received: {data}")
 
-    if 'mappings' not in data:
-        logger.warning("Missing mappings in validate-mapping request")
-        return jsonify({
-            'success': False,
-            'error': 'Missing mappings',
-            'details': 'The mappings field is required'
-        }), 400
+        # Check required fields
+        if 'job_id' not in data:
+            logger.warning("Missing job_id in validate-mapping request")
+            return jsonify({
+                'success': False,
+                'error': 'Missing job_id',
+                'details': 'The job_id field is required'
+            }), 400
 
-    job_id = data['job_id']
-    mappings = data['mappings']
+        if 'mappings' not in data:
+            logger.warning("Missing mappings in validate-mapping request")
+            return jsonify({
+                'success': False,
+                'error': 'Missing mappings',
+                'details': 'The mappings field is required'
+            }), 400
+
+        job_id = data['job_id']
+        mappings = data['mappings']
 
     # Log the request data for debugging
     logger.info(f"Validate mapping request received for job ID: {job_id}")
@@ -733,11 +782,28 @@ def validate_mapping():
 
     logger.info(f"Validating mappings for job {job_id}: {mappings}")
 
-    # Validate the mappings
-    issues = validate_mapping_helper(mappings)
+    try:
+        # Validate the mappings
+        issues = validate_mapping_helper(mappings)
 
-    # Check if there are any issues
-    has_issues = any(len(issues[key]) > 0 for key in issues)
+        # Log the validation issues for debugging
+        logger.info(f"Validation issues: {issues}")
+
+        # Check if there are any issues
+        has_issues = any(len(issues[key]) > 0 for key in issues)
+    except Exception as e:
+        logger.error(f"Error validating mappings: {str(e)}", exc_info=True)
+        # Return a more helpful error message
+        return jsonify({
+            'success': False,
+            'error': 'Validation failed',
+            'details': str(e),
+            'issues': {
+                'missing_required': [],
+                'unknown_fields': [],
+                'duplicate_mappings': []
+            }
+        }), 500
 
     # Log validation results
     if has_issues:
@@ -765,6 +831,9 @@ def validate_mapping():
         except Exception as e:
             logger.error(f"Error storing validated mappings in app.analysis_results: {str(e)}")
 
+    # Log the validation results
+    logger.info(f"Validation results for job {job_id}: success={not has_issues}, issues={issues}")
+
     # Return validation results
     response = jsonify({
         'success': not has_issues,
@@ -774,6 +843,8 @@ def validate_mapping():
 
     # Add CORS headers
     response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
 
     return response
 
